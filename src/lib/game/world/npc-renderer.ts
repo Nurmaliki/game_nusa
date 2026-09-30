@@ -1,0 +1,50 @@
+import Phaser from 'phaser';
+import { getNpc, NPC_LIST } from '$data/npcs';
+import type { NpcRegistry } from '../systems/npcs';
+
+/**
+ * Renders NPCs (see §21 / §36). Presentation only: positions come from the
+ * registry's schedule resolution; this class just draws + tracks sprites.
+ */
+export class NpcRenderer {
+	private scene: Phaser.Scene;
+	private sprites = new Map<string, Phaser.GameObjects.Sprite>();
+
+	constructor(scene: Phaser.Scene) {
+		this.scene = scene;
+	}
+
+	/** Create sprites for every NPC once anchors are known. */
+	build(registry: NpcRegistry, hour: number): void {
+		for (const def of NPC_LIST) {
+			const pos = registry.positionAt(def.id, hour);
+			const sprite = this.scene.add.sprite(pos.x, pos.y, def.texture).setDepth(45);
+			sprite.setTint(0x63b3ed);
+			this.sprites.set(def.id, sprite);
+		}
+	}
+
+	/** Sync sprite positions with the schedule for the current hour. */
+	sync(registry: NpcRegistry, hour: number): void {
+		for (const [id, sprite] of this.sprites) {
+			const pos = registry.positionAt(id, hour);
+			sprite.setPosition(pos.x, pos.y);
+		}
+	}
+
+	/** World position of an NPC sprite (for interaction distance checks). */
+	positionOf(id: string): { x: number; y: number } | null {
+		const sprite = this.sprites.get(id);
+		return sprite ? { x: sprite.x, y: sprite.y } : null;
+	}
+
+	destroy(): void {
+		for (const s of this.sprites.values()) s.destroy();
+		this.sprites.clear();
+	}
+}
+
+/** Exported for tests / scene wiring: does an NPC exist for this id? */
+export function npcExists(id: string): boolean {
+	return getNpc(id) !== undefined;
+}
