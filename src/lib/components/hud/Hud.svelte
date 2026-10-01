@@ -11,6 +11,7 @@
 	});
 
 	let biomeName = $state('Pesisir Tropis');
+	let weatherName = $state('Cerah');
 
 	// Placeholder stat bars until survival system lands in Phase 2.
 	let stats = $state<{ health: number; hunger: number; thirst: number; energy: number }>({
@@ -32,12 +33,31 @@
 			};
 		});
 		const offBiome = bus.on('BIOME_CHANGED', (p) => (biomeName = p.name));
+		const offWeather = bus.on('WEATHER_CHANGED', (p) => (weatherName = weatherLabel(p.weather)));
 		return () => {
 			offTime();
 			offStats();
 			offBiome();
+			offWeather();
 		};
 	});
+
+	// Weather display names (kept local so the HUD stays decoupled from the
+	// weather system's internals; only the id crosses the bus boundary).
+	function weatherLabel(id: string): string {
+		switch (id) {
+			case 'rain':
+				return 'Hujan';
+			case 'storm':
+				return 'Badai';
+			case 'fog':
+				return 'Berkabut';
+			case 'wind':
+				return 'Berangin';
+			default:
+				return 'Cerah';
+		}
+	}
 
 	const bars = $derived([
 		{ label: 'HP', value: stats.health, max: 100, color: '#e53e3e' },
@@ -53,6 +73,7 @@
 		<span class="time">{time.clock}</span>
 		<span class="phase">{time.phase}</span>
 		<span class="biome">{biomeName}</span>
+		<span class="weather" title="Cuaca">{weatherName}</span>
 	</div>
 
 	<div class="stats">
@@ -112,6 +133,13 @@
 		margin-left: 4px;
 		border-left: 1px solid rgba(255, 255, 255, 0.2);
 		color: #68d391;
+	}
+	.weather {
+		font-size: 0.8rem;
+		padding-left: 10px;
+		margin-left: 4px;
+		border-left: 1px solid rgba(255, 255, 255, 0.2);
+		color: #90cdf4;
 	}
 	.stats {
 		display: flex;

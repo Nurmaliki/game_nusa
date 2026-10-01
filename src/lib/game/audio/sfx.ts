@@ -190,6 +190,26 @@ export const SFX: Record<string, SfxDefinition> = {
 		attack: 0.01,
 		duration: 0.5,
 		gain: 0.26
+	},
+	weather_rain: {
+		id: 'weather_rain',
+		wave: 'noise',
+		startHz: 0,
+		endHz: 0,
+		attack: 0.08,
+		duration: 0.6,
+		gain: 0.12,
+		lowpassHz: 1400
+	},
+	weather_thunder: {
+		id: 'weather_thunder',
+		wave: 'noise',
+		startHz: 0,
+		endHz: 0,
+		attack: 0.002,
+		duration: 0.9,
+		gain: 0.3,
+		lowpassHz: 600
 	}
 };
 

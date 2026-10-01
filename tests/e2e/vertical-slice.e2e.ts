@@ -13,6 +13,8 @@ test('vertical slice: new game, open panels, no page errors', async ({ page }) =
 
 	// HUD clock is driven by the simulation bridge.
 	await expect(page.locator('.clock .time')).toBeVisible();
+	// Weather indicator is seeded and surfaced (starts clear).
+	await expect(page.locator('.clock .weather')).toBeVisible();
 
 	// Inventory panel toggles with the keyboard shortcut.
 	await page.keyboard.press('i');

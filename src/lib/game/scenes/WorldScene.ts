@@ -17,6 +17,7 @@ import { WildlifeManager } from '../systems/wildlife';
 import { CreatureRenderer } from '../world/creature-renderer';
 import { NpcRenderer } from '../world/npc-renderer';
 import { Feedback } from '../world/feedback';
+import { WeatherSystem, getWeather } from '../systems/weather';
 import { getNpc } from '$data/npcs';
 import { getItem } from '$data/items';
 import { registerControls, clearControls } from '../input/controls-bridge';
@@ -50,6 +51,9 @@ export class WorldScene extends Phaser.Scene {
 	private creatureRenderer!: CreatureRenderer;
 	private npcRenderer!: NpcRenderer;
 	private feedback!: Feedback;
+	private weather!: WeatherSystem;
+	private weatherOverlay!: Phaser.GameObjects.Rectangle;
+	private rainEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
 	private dialogueOpen = false;
 	private offDialogueClose: (() => void) | null = null;
 	private attackCooldownUntil = 0;
@@ -119,6 +123,21 @@ export class WorldScene extends Phaser.Scene {
 		this.wildlife = new WildlifeManager(() => state.seededRandom(`wildlife_${rngTick++}`));
 		this.creatureRenderer = new CreatureRenderer(this);
 		this.feedback = new Feedback(this);
+
+		// Weather: a pure Markov walk seeded from the world seed, restored from the
+		// saved id. Presentation is a camera-fixed tint plus optional rain.
+		this.weather = new WeatherSystem(state.weather, state.worldSeed);
+		// Emit the initial weather so the HUD never shows a stale default.
+		getGameBus().emit('WEATHER_CHANGED', {
+			weather: state.weather,
+			intensity: getWeather(state.weather)?.intensity ?? 0
+		});
+		this.weatherOverlay = this.add
+			.rectangle(-64, -64, this.scale.width + 128, this.scale.height + 128, 0x9fb4c8, 1)
+			.setOrigin(0, 0)
+			.setScrollFactor(0)
+			.setDepth(50001)
+			.setAlpha(0);
 
 		// NPCs: place anchors + render, then accept a dialogue-close signal.
 		state.npcs.placeAnchors(this.chunks.pixelWidth, this.chunks.pixelHeight);
@@ -211,6 +230,9 @@ export class WorldScene extends Phaser.Scene {
 		state.clock.advance(delta);
 		state.advanceSurvival(delta, { sprinting: this.player.isSprinting(this.controls) });
 
+		// Weather: advance the walk, then repaint the overlay + emit on change.
+		this.updateWeather(state, delta);
+
 		const darkness = darknessForHour(state.clock.hour);
 		// Gentle curve: nights dim to ~0.42 max instead of blacking out.
 		this.ambient.setAlpha(Math.max(0, Math.min(0.42, darkness * 0.42)));
@@ -263,6 +285,81 @@ export class WorldScene extends Phaser.Scene {
 			const label = SKILL_LABELS[g.id] ?? g.id;
 			getGameBus().emit('TOAST', { text: `${label} naik ke level ${g.level}`, kind: 'success' });
 		}
+	}
+
+	/**
+	 * Advance the weather walk and drive its presentation. The overlay is a
+	 * camera-fixed tint whose colour/alpha come from the weather definition;
+	 * rain/storm also spray short-lived streaks. Respects reduced motion by
+	 * skipping the streak particles (the tint alone still conveys the weather).
+	 */
+	private updateWeather(
+		state: NonNullable<ReturnType<typeof getGameSession>['state']>,
+		delta: number
+	): void {
+		const changed = this.weather.advance(delta);
+		const id = this.weather.current;
+
+		if (changed) {
+			state.weather = changed;
+			const def = getWeather(changed);
+			const name = def?.name ?? changed;
+			getGameBus().emit('WEATHER_CHANGED', { weather: changed, intensity: def?.intensity ?? 0 });
+			if (changed !== 'clear') {
+				getGameBus().emit('TOAST', { text: `Cuaca: ${name}`, kind: 'info' });
+			}
+			if (changed === 'rain') getGameBus().emit('SFX', { id: 'weather_rain' });
+			if (changed === 'storm') getGameBus().emit('SFX', { id: 'weather_thunder' });
+		}
+
+		// Visual overlay: grey-blue tint, denser for storms/fog.
+		const vis = this.weather.visibility();
+		const alpha = (1 - vis) * 0.5;
+		this.weatherOverlay.setAlpha(alpha);
+		if (id === 'storm') this.weatherOverlay.setFillStyle(0x2a3548, 1);
+		else if (id === 'fog') this.weatherOverlay.setFillStyle(0xc7d2dc, 1);
+		else this.weatherOverlay.setFillStyle(0x7e8ca0, 1);
+
+		// Rain streaks: spawn/despawn a single emitter as the weather demands.
+		const needsRain = (id === 'rain' || id === 'storm') && !settingsStore.reducedMotion;
+		if (needsRain && !this.rainEmitter) this.rainEmitter = this.createRain();
+		else if (!needsRain && this.rainEmitter) {
+			this.rainEmitter.destroy();
+			this.rainEmitter = undefined;
+		}
+	}
+
+	/** A camera-fixed rain emitter (streaks falling across the viewport). */
+	private createRain(): Phaser.GameObjects.Particles.ParticleEmitter {
+		const w = this.scale.width;
+		const zoneConfig: Phaser.Types.GameObjects.Particles.ParticleEmitterRandomZoneConfig = {
+			type: 'random',
+			// A RandomZoneSource only needs getRandomPoint; a plain closure avoids
+			// the Vector2/Vector2Like mismatch between Geom.Rectangle and the type.
+			source: {
+				getRandomPoint: (point: Phaser.Types.Math.Vector2Like) => {
+					point.x = Math.random() * w;
+					point.y = 0;
+					return point;
+				}
+			}
+		};
+		return this.add
+			.particles(0, -16, undefined, {
+				x: { min: -40, max: w + 40 },
+				y: -16,
+				lifespan: 900,
+				speedY: { min: 420, max: 560 },
+				speedX: { min: -40, max: -10 },
+				scaleX: 0.35,
+				scaleY: { min: 0.7, max: 1.1 },
+				alpha: { start: 0.55, end: 0 },
+				quantity: 3,
+				frequency: 40,
+				emitZone: zoneConfig
+			})
+			.setScrollFactor(0)
+			.setDepth(50002);
 	}
 
 	private updateBiome(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {
@@ -598,6 +695,9 @@ export class WorldScene extends Phaser.Scene {
 		this.chunkRenderer.destroy();
 		this.chunks.clear();
 		this.ambient.destroy();
+		this.weatherOverlay.destroy();
+		this.rainEmitter?.destroy();
+		this.rainEmitter = undefined;
 		for (const s of this.buildingSprites.values()) s.destroy();
 		this.buildingSprites.clear();
 		for (const s of this.buildingDetail.values()) s.destroy();
