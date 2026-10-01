@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Skills, xpForLevel, levelForXp, SKILL_IDS } from './skills';
+import { Skills, checkRequirement, xpForLevel, levelForXp, SKILL_IDS } from './skills';
 import type { SkillSave } from '$types/save';
 
 describe('xpForLevel', () => {
@@ -107,5 +107,31 @@ describe('Skills', () => {
 		const combat = snap.find((e) => e.id === 'combat');
 		expect(combat?.level).toBe(3);
 		expect(combat?.xp).toBe(xpForLevel(3));
+	});
+});
+
+describe('Skills.meets / checkRequirement', () => {
+	it('meets() passes when no requirement or level is sufficient', () => {
+		expect(Skills.meets({}, undefined)).toBe(true);
+		expect(Skills.meets({ crafting: 5 }, { id: 'crafting', level: 5 })).toBe(true);
+		expect(Skills.meets({ crafting: 4 }, { id: 'crafting', level: 5 })).toBe(false);
+		expect(Skills.meets({}, { id: 'crafting', level: 1 })).toBe(false);
+	});
+
+	it('checkRequirement returns ok/err accordingly', () => {
+		expect(checkRequirement({ fishing: 3 }, { id: 'fishing', level: 3 }).ok).toBe(true);
+		const r = checkRequirement({}, { id: 'fishing', level: 1 });
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toBe('skill_locked');
+		expect(checkRequirement({}, undefined).ok).toBe(true);
+	});
+
+	it('deserialize ignores unknown skill ids and keeps valid ones', () => {
+		const s = new Skills();
+		s.deserialize([
+			{ id: 'gathering', level: 1, xp: 42 },
+			{ id: 'not_a_skill', level: 1, xp: 999 }
+		]);
+		expect(s.xp('gathering')).toBe(42);
 	});
 });

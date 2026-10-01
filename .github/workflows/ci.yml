@@ -31,8 +31,8 @@ jobs:
       - name: Typecheck (svelte-check)
         run: npm run check
 
-      - name: Unit tests
-        run: npm run test:unit -- --run
+      - name: Unit tests (with coverage thresholds)
+        run: npm run test:coverage
 
       - name: Production build
         run: npm run build

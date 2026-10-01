@@ -97,3 +97,43 @@ describe('crafting craft', () => {
 		expect(inv.count('stone_axe')).toBe(1);
 	});
 });
+
+describe('craft error paths', () => {
+	it('rejects an unknown recipe id', () => {
+		const inv = new Inventory(10, 5);
+		const r = craft(inv, 'not_a_recipe', ctx, lookup);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toEqual({ reason: 'unknown_recipe' });
+	});
+
+	it('requires the recipe station to be available', () => {
+		const inv = new Inventory(10, 5);
+		inv.add({ id: 'glass', qty: 2 }, getItem('glass')!);
+		inv.add({ id: 'iron_ingot', qty: 1 }, getItem('iron_ingot')!);
+		inv.add({ id: 'charcoal', qty: 2 }, getItem('charcoal')!);
+		const r = craft(inv, 'lantern', { availableStations: new Set() }, lookup);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toMatchObject({ reason: 'missing_station' });
+	});
+
+	it('enforces a skill requirement above the current level', () => {
+		const inv = new Inventory(10, 5);
+		inv.add({ id: 'wood', qty: 5 }, getItem('wood')!);
+		const recipe = {
+			id: 'synth',
+			name: 'Synth',
+			station: 'hand' as const,
+			ingredients: [{ id: 'wood', qty: 1 }],
+			outputs: [{ id: 'wood', qty: 1 }],
+			durationMs: 0,
+			skillRequirement: { id: 'crafting', level: 5 }
+		};
+		const r = canCraft(inv, recipe, { availableStations: new Set(), skills: { crafting: 1 } });
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toMatchObject({ reason: 'skill_too_low', skill: 'crafting' });
+		// At the required level the same recipe passes.
+		expect(
+			canCraft(inv, recipe, { availableStations: new Set(), skills: { crafting: 5 } }).ok
+		).toBe(true);
+	});
+});

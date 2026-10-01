@@ -78,3 +78,26 @@ describe('npcPositionAt', () => {
 		expect(pos.x).toBe(100 - 120);
 	});
 });
+
+describe('NpcRegistry edge cases', () => {
+	it('returns safe defaults for unknown ids', () => {
+		const reg = new NpcRegistry();
+		expect(reg.addRelationship('ghost', 5)).toBe(0);
+		expect(reg.positionAt('ghost', 9)).toEqual({ x: 0, y: 0 });
+		expect(reg.activityAt('ghost', 9)).toBeNull();
+	});
+
+	it('finds the nearest NPC within range and excludes distant ones', () => {
+		const reg = new NpcRegistry();
+		reg.placeAnchors(4000, 3000);
+		// Ask from a point near the nelayan anchor (placed at the coast).
+		const near = reg.nearest(
+			{ x: reg.get('nelayan')!.anchor.x, y: reg.get('nelayan')!.anchor.y },
+			500,
+			9
+		);
+		expect(near?.def.id).toBe('nelayan');
+		// A tiny range from far away yields nobody.
+		expect(reg.nearest({ x: -99999, y: -99999 }, 10, 9)).toBeNull();
+	});
+});

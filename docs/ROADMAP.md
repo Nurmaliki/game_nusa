@@ -480,3 +480,41 @@ external assets.
 
 Gate after this pass: `check`, `lint`, `test:unit` (366), `build`, `test:e2e`
 (19) all pass.
+
+## Post-release: Depth & Longevity Pass
+
+A third round targeting the deepest gaps (a game that ends after one chapter,
+systems promised but inert, and quality blind spots). Still engine-free layering,
+data-driven content, zero external assets. Gate kept green at every step.
+
+- **Living weather** (`systems/weather.ts`): `BALANCE.weather` and
+  `state.weather` existed but nothing ever changed them and `WEATHER_CHANGED`
+  was never emitted. A pure, seeded Markov walk over clear/wind/rain/storm/fog
+  now drives a camera-fixed tint + rain streaks for rain/storm (skipped under
+  reduced motion), a HUD chip, and `weather_rain`/`weather_thunder` cues.
+  Rain also boosts fishing yields. Deterministic + save-safe (no migration).
+- **Fishing is real** (`data/resources`, `systems/gathering`, GameState):
+  resource nodes gained an optional `skill`; fishing shoals now train the
+  `fishing` skill (previously every harvest trained `gathering`, so fishing
+  could never progress). A distinct `fish_catch` cue + splash feedback play.
+- **Chapter II — the volcanic crater** (`data/*`): the story no longer ends at
+  `craft_boat`. A new innermost `volcanic` biome, three nodes (obsidian, sulfur,
+  gem) with distinct painters, a tier-3 `obsidian_forge` building + recipes
+  (crafting 6–8), new gear (obsidian pickaxe/blade/armor), the `komodo` apex
+  predator (own sprite) and a five-quest chain ending on a second finale. The
+  chapter-complete overlay is now chapter-aware (Bab I / Bab II).
+- **Achievements** (`systems/achievements.ts` + `data/achievements`): a
+  data-driven long loop. 17 achievements evaluated against a progress snapshot
+  (stats / skills / quests / chapters / exploration), monotonic (never relock),
+  persisted as an optional save field. Unlocks fire a toast + `achievement` SFX;
+  a `P` panel lists them (secrets hidden as "???").
+- **First-session onboarding** (`systems/tutorial.ts`): a pure checklist
+  (move → gather → craft → build) that advances from real gameplay signals; a
+  skippable overlay, remembered across sessions.
+- **Testability & guards**: extracted the engine-free `core/sprite-keys.ts` so
+  the data→sprite mapping is unit-tested (guards silent fallbacks for new
+  content); added Chapter II chain integrity tests; hardened the perf E2E to
+  take the best of several rAF samples so a loaded machine can't flap it.
+
+Gate after this pass: `check`, `lint`, `test:unit` (408), `build`, `test:e2e`
+(21) all pass.

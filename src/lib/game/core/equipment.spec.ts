@@ -59,3 +59,44 @@ describe('Equipment weapons & armor', () => {
 		expect(e.weapon).toBeNull();
 	});
 });
+
+describe('Equipment armor & weapon durability', () => {
+	it('equips armor, computes durability-scaled reduction, and unequips', () => {
+		const e = new Equipment(5);
+		const def = getItem('iron_armor')!;
+		expect(
+			e.equipArmor({ id: 'iron_armor', qty: 1, durability: def.armor!.durability }, def).ok
+		).toBe(true);
+		// Full durability => full listed reduction.
+		expect(e.armorReduction(lookup)).toBeCloseTo(def.armor!.damageReduction);
+		// Half durability => half reduction.
+		e.armor = { id: 'iron_armor', qty: 1, durability: def.armor!.durability / 2 };
+		expect(e.armorReduction(lookup)).toBeCloseTo(def.armor!.damageReduction / 2);
+		expect(e.unequipArmor()?.id).toBe('iron_armor');
+		expect(e.armorReduction(lookup)).toBe(0);
+	});
+
+	it('rejects equipping a non-armor item', () => {
+		const e = new Equipment(5);
+		expect(e.equipArmor({ id: 'wood', qty: 1 }, getItem('wood')!).ok).toBe(false);
+	});
+
+	it('unequipWeapon returns the weapon and clears the slot', () => {
+		const e = new Equipment(5);
+		e.weapon = { id: 'wooden_spear', qty: 1, durability: 5 };
+		expect(e.unequipWeapon()?.id).toBe('wooden_spear');
+		expect(e.weapon).toBeNull();
+		expect(e.unequipWeapon()).toBeNull();
+	});
+
+	it('damageWeapon reduces durability and is a no-op without a weapon', () => {
+		const e = new Equipment(5);
+		expect(e.damageWeapon(1, lookup)).toBe(false); // no weapon
+		e.weapon = { id: 'wooden_spear', qty: 1, durability: 10 };
+		expect(e.damageWeapon(3, lookup)).toBe(false);
+		expect(e.weapon?.durability).toBe(7);
+		// A non-weapon in the slot is ignored defensively.
+		e.weapon = { id: 'wood', qty: 1 };
+		expect(e.damageWeapon(1, lookup)).toBe(false);
+	});
+});

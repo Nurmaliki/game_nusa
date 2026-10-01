@@ -45,6 +45,38 @@ export default defineConfig({
 	},
 	test: {
 		expect: { requireAssertions: true },
+		coverage: {
+			provider: 'v8',
+			reporter: ['text-summary', 'json-summary'],
+			include: ['src/lib/game/**/*.ts', 'src/lib/data/**/*.ts'],
+			// Engine/IO-bound files (Phaser scenes & renderers, WebAudio, IndexedDB
+			// repository, input, sprite painting, the game bootstrap and the
+			// console logger) are exercised by the Playwright E2E suite, not the
+			// node unit runner, so they are excluded from the unit denominator.
+			exclude: [
+				'src/**/*.spec.ts',
+				'src/**/*.svelte.ts',
+				'src/lib/game/scenes/**',
+				'src/lib/game/world/**',
+				'src/lib/game/audio/**',
+				'src/lib/game/input/**',
+				'src/lib/game/entities/**',
+				'src/lib/game/building/build-controller.ts',
+				'src/lib/game/save/repository.ts',
+				'src/lib/game/save/autosave.ts',
+				'src/lib/game/core/art.ts',
+				'src/lib/game/core/sprites.ts',
+				'src/lib/game/core/placeholders.ts',
+				'src/lib/game/core/game-config.ts',
+				'src/lib/game/core/logger.ts'
+			],
+			thresholds: {
+				lines: 80,
+				functions: 80,
+				branches: 75,
+				statements: 80
+			}
+		},
 		projects: [
 			{
 				extends: './vite.config.ts',
