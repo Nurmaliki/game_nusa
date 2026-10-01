@@ -13,6 +13,8 @@
 		<dl>
 			<dt>Game</dt>
 			<dd>Nusantara Survival</dd>
+			<dt>Pembuat</dt>
+			<dd>Nur Maliki</dd>
 			<dt>Versi</dt>
 			<dd>{GAME_VERSION}</dd>
 			<dt>Build</dt>

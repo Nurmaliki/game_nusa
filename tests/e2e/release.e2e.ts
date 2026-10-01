@@ -13,6 +13,10 @@ test('release: build metadata is real and surfaced in About', async ({ page }) =
 
 	await page.goto('/about');
 
+	// The creator is credited.
+	const creator = await page.locator('dt:has-text("Pembuat") + dd').textContent();
+	expect(creator?.trim()).toBe('Nur Maliki');
+
 	// The version is a semver triple and the build id is a real value, never 'dev'.
 	const version = await page.locator('dt:has-text("Versi") + dd').textContent();
 	expect(version?.trim()).toMatch(/^\d+\.\d+\.\d+$/);
