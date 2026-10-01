@@ -145,6 +145,13 @@ export const BALANCE = {
 		activeRadiusChunks: 2,
 		worldChunksX: 16,
 		worldChunksY: 16,
+		/**
+		 * Resolution the per-chunk ground is baked at, as a fraction of the chunk
+		 * size. 1 = full res (1024², ~4 MB/chunk). Lower values cut VRAM and bake
+		 * time roughly quadratically; 0.5 = 512² (~1 MB) and is indistinguishable
+		 * for the soft, organic ground art. Keep < 1 for mobile-friendly memory.
+		 */
+		groundBakeScale: 0.5,
 		coastLineFactor: 0.32,
 		rainforestFactor: 0.34,
 		/** Resource nodes placed per chunk (inclusive range), deterministic. */

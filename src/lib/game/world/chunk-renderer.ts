@@ -192,10 +192,38 @@ export class ChunkRenderer {
 
 		// Bake to a static texture, then drop the graphics. The texture key is
 		// unique per chunk so re-entering a chunk reuses the same layout.
+		//
+		// Memory: a full-res bake is 1024² (~4 MB) per chunk, and ~25 live chunks
+		// would hold ~100 MB of VRAM — too much for low-end mobile. We bake into a
+		// scratch canvas at full resolution, then downscale-blit once into a
+		// smaller canvas texture (see BALANCE.world.groundBakeScale). The blit is
+		// done by us (generateTexture ignores graphics transforms), so the drawing
+		// math above stays in exact world coordinates and remains seamless.
 		const texKey = `ground_${key}`;
-		g.generateTexture(texKey, size, size);
+		const bakeScale = BALANCE.world.groundBakeScale;
+		if (bakeScale >= 1) {
+			g.generateTexture(texKey, size, size);
+		} else {
+			const outSize = Math.max(1, Math.round(size * bakeScale));
+			const scratch = document.createElement('canvas');
+			scratch.width = size;
+			scratch.height = size;
+			// generateTexture accepts a canvas key and draws into it 1:1.
+			g.generateTexture(scratch, size, size);
+			const out = document.createElement('canvas');
+			out.width = outSize;
+			out.height = outSize;
+			const octx = out.getContext('2d');
+			if (octx) {
+				octx.imageSmoothingEnabled = true;
+				octx.drawImage(scratch, 0, 0, size, size, 0, 0, outSize, outSize);
+			}
+			this.scene.textures.addCanvas(texKey, out);
+		}
 		g.destroy();
 		const image = this.scene.add.image(originX, originY, texKey).setOrigin(0, 0).setDepth(-10000);
+		// Stretch the (possibly downscaled) bake back to the chunk's true size.
+		image.setDisplaySize(size, size);
 		this.groundChunks.set(key, image);
 	}
 
