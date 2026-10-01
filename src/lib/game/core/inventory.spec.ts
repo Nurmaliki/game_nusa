@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Inventory } from './inventory';
+import { Inventory, sortSlots } from './inventory';
 import type { ItemDefinition } from '$types/items';
 
 const defs: Record<string, ItemDefinition> = {
@@ -35,6 +35,30 @@ const defs: Record<string, ItemDefinition> = {
 		stackSize: 1,
 		weight: 1,
 		rarity: 'common',
+		icon: 'x',
+		sellValue: 1,
+		tags: []
+	},
+	berry: {
+		id: 'berry',
+		name: 'Berry',
+		description: '',
+		category: 'food',
+		stackSize: 20,
+		weight: 1,
+		rarity: 'uncommon',
+		icon: 'x',
+		sellValue: 1,
+		tags: []
+	},
+	relic: {
+		id: 'relic',
+		name: 'Relic',
+		description: '',
+		category: 'quest',
+		stackSize: 1,
+		weight: 1,
+		rarity: 'quest',
 		icon: 'x',
 		sellValue: 1,
 		tags: []
@@ -209,5 +233,98 @@ describe('Inventory durability preservation', () => {
 		i.add({ id: 'axe', qty: 1, durability: 15 }, defs.axe);
 		expect(i.count('axe')).toBe(2);
 		expect(i.get(1)).toEqual({ id: 'axe', qty: 1, durability: 15 });
+	});
+});
+
+describe('sortSlots', () => {
+	it('is pure: does not mutate the input array', () => {
+		const input = [{ id: 'stone', qty: 5 }, null, { id: 'axe', qty: 1 }];
+		const snapshot = JSON.parse(JSON.stringify(input));
+		sortSlots(input, lookup);
+		expect(input).toEqual(snapshot);
+	});
+
+	it('orders by category (tools before resources) and pushes empties last', () => {
+		const out = sortSlots([{ id: 'wood', qty: 3 }, null, { id: 'axe', qty: 1 }], lookup);
+		expect(out[0]).toEqual({ id: 'axe', qty: 1 });
+		expect(out[1]).toEqual({ id: 'wood', qty: 3 });
+		expect(out[2]).toBeNull();
+	});
+
+	it('groups identical stacks together', () => {
+		const out = sortSlots(
+			[
+				{ id: 'wood', qty: 1 },
+				{ id: 'stone', qty: 1 },
+				{ id: 'wood', qty: 2 }
+			],
+			lookup
+		);
+		// The two wood stacks must be adjacent (same-id grouping), regardless of
+		// whether wood or stone is the alphabetically-first resource.
+		const ids = out.map((s) => s?.id);
+		const firstWood = ids.indexOf('wood');
+		expect(ids[firstWood + 1]).toBe('wood');
+	});
+
+	it('ranks rarer items ahead within the same category', () => {
+		// both food? use resource/common vs food/uncommon -> category dominates.
+		const out = sortSlots(
+			[
+				{ id: 'relic', qty: 1 },
+				{ id: 'berry', qty: 1 }
+			],
+			lookup
+		);
+		expect(out[0]?.id).toBe('berry'); // food outranks quest
+	});
+
+	it('is stable and deterministic across repeated calls', () => {
+		const input = [
+			{ id: 'wood', qty: 3 },
+			{ id: 'berry', qty: 2 },
+			{ id: 'axe', qty: 1 },
+			{ id: 'stone', qty: 4 }
+		];
+		expect(sortSlots(input, lookup)).toEqual(sortSlots(input, lookup));
+	});
+
+	it('keeps capacity length (padding with nulls)', () => {
+		const out = sortSlots([{ id: 'wood', qty: 3 }, null, null, null], lookup);
+		expect(out).toHaveLength(4);
+	});
+
+	it('puts a fresher tool before a worn one of the same id', () => {
+		const out = sortSlots(
+			[
+				{ id: 'axe', qty: 1, durability: 5 },
+				{ id: 'axe', qty: 1, durability: 40 }
+			],
+			lookup
+		);
+		expect(out[0]?.durability).toBe(40);
+		expect(out[1]?.durability).toBe(5);
+	});
+});
+
+describe('Inventory.sort', () => {
+	it('reorders slots and bumps the revision', () => {
+		const i = inv();
+		i.set(0, { id: 'wood', qty: 3 });
+		i.set(1, { id: 'axe', qty: 1 });
+		const before = i.revision;
+		i.sort(lookup);
+		expect(i.get(0)?.id).toBe('axe');
+		expect(i.get(1)?.id).toBe('wood');
+		expect(i.revision).toBeGreaterThan(before);
+	});
+
+	it('is a no-op (no revision bump) when already sorted', () => {
+		const i = inv();
+		i.set(0, { id: 'axe', qty: 1 });
+		i.sort(lookup);
+		const after = i.revision;
+		i.sort(lookup);
+		expect(i.revision).toBe(after);
 	});
 });

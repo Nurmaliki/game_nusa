@@ -7,6 +7,8 @@
 
 	let revision = $state(0);
 	let session = getGameSession();
+	/** Index of the slot currently being dragged (for reorder / merge). */
+	let dragFrom = $state<number | null>(null);
 
 	$effect(() => {
 		const off = getGameBus().on('INVENTORY_CHANGED', (p) => (revision = p.revision));
@@ -38,6 +40,36 @@
 			getGameBus().emit('TOAST', { text: `Mengonsumsi ${def.name}`, kind: 'info' });
 		}
 	}
+
+	/** Tidy the bag: group by category, then rarity/name (QoL). */
+	function tidy() {
+		const state = session.state;
+		if (!state) return;
+		state.inventory.sort(getItem);
+		session.notifyInventory();
+		getGameBus().emit('SFX', { id: 'ui_confirm' });
+	}
+
+	/** Move/merge a stack from one slot to another (drag & drop). */
+	function moveTo(to: number) {
+		const from = dragFrom;
+		dragFrom = null;
+		const state = session.state;
+		if (!state || from === null || from === to) return;
+		const src = state.inventory.get(from);
+		if (!src) return;
+		const def = getItem(src.id);
+		if (!def) return;
+		const r = state.inventory.move(from, to, def);
+		if (r.ok) {
+			session.notifyInventory();
+			getGameBus().emit('SFX', { id: 'ui_click' });
+		}
+	}
+
+	function onDragStart(index: number) {
+		dragFrom = index;
+	}
 </script>
 
 {#if open}
@@ -45,16 +77,26 @@
 		<div class="panel">
 			<header>
 				<h2>Inventaris</h2>
-				<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
+				<div class="actions">
+					<button class="tidy" onclick={tidy} title="Kelompokkan item">Rapikan</button>
+					<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
+				</div>
 			</header>
 			<div class="grid">
 				{#each slots as slot, i (i)}
 					{@const def = slot ? getItem(slot.id) : null}
 					<button
-						class="slot {def?.rarity ?? ''}"
-						disabled={!slot}
+						class="slot {def?.rarity ?? ''} {dragFrom === i ? 'dragging' : ''} {slot
+							? 'filled'
+							: ''}"
+						disabled={!slot && dragFrom === null}
+						draggable={!!slot}
 						title={slot ? `${itemName(slot.id)} (${slot.qty})` : 'Kosong'}
-						onclick={() => consume(i)}
+						ondragstart={() => onDragStart(i)}
+						ondragover={(e) => e.preventDefault()}
+						ondrop={() => moveTo(i)}
+						ondragend={() => (dragFrom = null)}
+						onclick={() => (dragFrom === null ? consume(i) : moveTo(i))}
 					>
 						{#if slot}
 							<span class="icon" aria-hidden="true"></span>
@@ -67,7 +109,9 @@
 					</button>
 				{/each}
 			</div>
-			<p class="hint">Klik item makanan/obat untuk menggunakannya.</p>
+			<p class="hint">
+				Seret untuk menata/menggabungkan item. Klik makanan/obat untuk menggunakannya.
+			</p>
 		</div>
 	</div>
 {/if}
@@ -103,6 +147,24 @@
 		margin: 0;
 		font-size: 1.15rem;
 	}
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.tidy {
+		background: rgba(56, 178, 172, 0.18);
+		border: 1px solid rgba(56, 178, 172, 0.5);
+		color: #81e6d9;
+		border-radius: 8px;
+		padding: 4px 10px;
+		font-size: 0.75rem;
+		font-family: inherit;
+		cursor: pointer;
+	}
+	.tidy:hover {
+		background: rgba(56, 178, 172, 0.3);
+	}
 	.close {
 		background: transparent;
 		border: none;
@@ -134,6 +196,13 @@
 	.slot:disabled {
 		cursor: default;
 		opacity: 0.5;
+	}
+	.slot.filled {
+		cursor: grab;
+	}
+	.slot.dragging {
+		opacity: 0.4;
+		border-style: dashed;
 	}
 	.slot.uncommon {
 		border-color: #38a169;

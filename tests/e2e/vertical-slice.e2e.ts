@@ -19,6 +19,11 @@ test('vertical slice: new game, open panels, no page errors', async ({ page }) =
 	await expect(page.getByRole('dialog', { name: 'Inventaris' })).toBeVisible();
 	// Starting kit includes wood.
 	await expect(page.getByRole('dialog', { name: 'Inventaris' }).getByText('Kayu')).toBeVisible();
+	// Inventory QoL: the "Rapikan" (tidy) action is available and clickable.
+	const tidy = page.getByRole('button', { name: 'Rapikan' });
+	await expect(tidy).toBeVisible();
+	await tidy.click();
+	await expect(page.getByRole('dialog', { name: 'Inventaris' }).getByText('Kayu')).toBeVisible();
 	await page.keyboard.press('Escape');
 	await expect(page.getByRole('dialog', { name: 'Inventaris' })).toBeHidden();
 

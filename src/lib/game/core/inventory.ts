@@ -1,7 +1,86 @@
 import type { InventorySave } from '$types/save';
 import type { ItemStack } from '$types/items';
 import type { ItemDefinition } from '$types/items';
+import type { ItemCategory, Rarity } from '$types/core';
 import { err, ok, type Result } from '$types/core';
+
+// ── Sorting (QoL) ───────────────────────────────────────────────────────
+
+/** Value equality for two slots (null-safe). */
+function sameStack(a: ItemStack | null, b: ItemStack | null): boolean {
+	if (a === null || b === null) return a === b;
+	return a.id === b.id && a.qty === b.qty && a.durability === b.durability;
+}
+
+/**
+ * Display order for categories when auto-sorting the inventory: tools first
+ * (you reach for them constantly), then combat gear, then survival supplies,
+ * then raw materials. Anything unlisted falls in the middle.
+ */
+export const CATEGORY_ORDER: ItemCategory[] = [
+	'tool',
+	'weapon',
+	'armor',
+	'food',
+	'drink',
+	'consumable',
+	'material',
+	'resource',
+	'quest'
+];
+
+/** Ascending rarity weight so rarer items float to the front of a group. */
+const RARITY_ORDER: Rarity[] = ['quest', 'special', 'rare', 'uncommon', 'common'];
+
+/**
+ * Reorder the given slots into a stable, human-friendly layout (see §15 QoL).
+ *
+ * Pure: it takes slot data + an item lookup and returns a NEW array — the same
+ * inputs always produce the same output, so it is trivially unit-testable and
+ * never mutates its arguments. Empty slots are pushed to the end.
+ *
+ * Grouping is by item id (so identical stacks sit together), ordered by
+ * category, then rarity, then name, then durability (so a fresh tool precedes a
+ * worn one). Ties fall back to the original index for determinism.
+ */
+export function sortSlots(slots: (ItemStack | null)[], lookup: ItemLookup): (ItemStack | null)[] {
+	const rank = <T>(list: readonly T[], value: T, fallback = list.length): number => {
+		const i = list.indexOf(value);
+		return i === -1 ? fallback : i;
+	};
+
+	const filled = slots
+		.map((s, index) => ({ s, index }))
+		.filter((e): e is { s: ItemStack; index: number } => e.s !== null);
+
+	filled.sort((a, b) => {
+		const da = lookup(a.s.id);
+		const db = lookup(b.s.id);
+		const catA = rank(CATEGORY_ORDER, da?.category as ItemCategory);
+		const catB = rank(CATEGORY_ORDER, db?.category as ItemCategory);
+		if (catA !== catB) return catA - catB;
+
+		const rarA = rank(RARITY_ORDER, da?.rarity as Rarity);
+		const rarB = rank(RARITY_ORDER, db?.rarity as Rarity);
+		if (rarA !== rarB) return rarA - rarB;
+
+		const nameA = da?.name ?? a.s.id;
+		const nameB = db?.name ?? b.s.id;
+		if (nameA !== nameB) return nameA.localeCompare(nameB);
+
+		// Same item: keep stacks together, freshest durability first.
+		if (a.s.id !== b.s.id) return a.s.id.localeCompare(b.s.id);
+		const durA = a.s.durability ?? Number.POSITIVE_INFINITY;
+		const durB = b.s.durability ?? Number.POSITIVE_INFINITY;
+		if (durA !== durB) return durB - durA;
+
+		return a.index - b.index;
+	});
+
+	const out: (ItemStack | null)[] = filled.map((e) => ({ ...e.s }));
+	while (out.length < slots.length) out.push(null);
+	return out;
+}
 
 /**
  * Pure inventory domain logic (see §15 / §60).
@@ -193,6 +272,17 @@ export class Inventory {
 		this.slots[index] = null;
 		this.revision++;
 		return ok({ ...s });
+	}
+
+	/** Reorder slots into a tidy layout (QoL). Marks a revision if anything moved. */
+	sort(lookup: ItemLookup): void {
+		const next = sortSlots(this.slots, lookup);
+		// Only bump the revision when the layout actually changed (value compare),
+		// so repeatedly pressing "tidy" on an ordered bag is a true no-op.
+		const changed = next.some((s, i) => !sameStack(s, this.slots[i]));
+		if (!changed) return;
+		this.slots = next;
+		this.revision++;
 	}
 
 	isEmpty(): boolean {
