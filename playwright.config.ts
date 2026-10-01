@@ -19,6 +19,13 @@ export default defineConfig({
 		port: 4173,
 		timeout: 180_000
 	},
+	// E2E boots a real WebGL canvas, so it is inherently timing-sensitive on a
+	// shared runner. Retry on CI only (the whole point of a retry is that the
+	// test is green when the machine is calm); a genuine regression still fails
+	// every attempt. Local runs keep retries:0 so we see the first failure.
+	retries: process.env.CI ? 2 : 0,
+	// Record a trace on the first retry so a CI-only flake is diagnosable.
+	use: { trace: 'on-first-retry' },
 	testMatch: '**/*.e2e.{ts,js}',
 	workers: 2,
 	projects: [

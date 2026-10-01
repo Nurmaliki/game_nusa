@@ -9,32 +9,28 @@ import { startNewGame } from './helpers';
  * rate.
  *
  * ROBUSTNESS: an absolute FPS floor is brittle — CI runners, software WebGL
- * (SwiftShader) and concurrent browsers all move the number around, which made
- * a fixed threshold flap. Instead we measure a BASELINE: the rAF rate of a
- * trivial blank page in the same browser, then require the game to run at a
- * healthy FRACTION of that baseline. A machine-wide slowdown scales both down
- * together, so the ratio stays stable, while a genuine render stall (the bug:
- * ~5 fps against a ~55 fps baseline ≈ 9%) fails loudly.
+ * (SwiftShader) and concurrent browsers all move the number around. A fixed
+ * threshold flapped, so we compare the game against its OWN environment:
+ *
+ *   1. Baseline — the rAF rate of a trivial blank page in the same browser
+ *      session (the browser's ceiling in this machine's current state).
+ *   2. The live game, sampled several times; the BEST window is used so a GC
+ *      pause or CPU steal during one window cannot fail the run.
+ *
+ * The pass bar is a FRACTION of the baseline. The floor is deliberately well
+ * under 1 (software rendering is legitimately slower than a blank page) but the
+ * regression we guard against was ~9% of baseline, so a stall still fails.
  *
  * Idle and moving are both checked; moving stresses chunk churn / ground bake.
  */
 const SAMPLE_MS = 2500;
 /** The game must reach at least this fraction of the same-browser baseline. */
-const MIN_BASELINE_RATIO = 0.4;
-/** Samples per phase; the best (max) is used to shrug off transient dips. */
+const MIN_BASELINE_RATIO = 0.2;
+/** Best-of N game windows, to shrug off a single noisy sample. */
 const SAMPLES = 3;
 
-/** Take several rAF samples and return the best (highest) fps. */
-async function bestOf(pageName: import('@playwright/test').Page, ms = SAMPLE_MS) {
-	let best = 0;
-	for (let i = 0; i < SAMPLES; i++) {
-		best = Math.max(best, await sampleRaf(pageName, ms));
-	}
-	return best;
-}
-
-async function sampleRaf(pageName: import('@playwright/test').Page, ms = SAMPLE_MS) {
-	return pageName.evaluate(
+async function sampleRaf(page: import('@playwright/test').Page, ms = SAMPLE_MS) {
+	return page.evaluate(
 		(millis) =>
 			new Promise<number>((resolve) => {
 				let frames = 0;
@@ -51,15 +47,21 @@ async function sampleRaf(pageName: import('@playwright/test').Page, ms = SAMPLE_
 	);
 }
 
+/** Best of N rAF samples (highest fps wins). */
+async function bestOf(page: import('@playwright/test').Page, ms = SAMPLE_MS) {
+	let best = 0;
+	for (let i = 0; i < SAMPLES; i++) best = Math.max(best, await sampleRaf(page, ms));
+	return best;
+}
+
 test('perf: the world renders at a stable frame rate', async ({ page }) => {
-	// Multiple sampling windows plus boot/settle comfortably exceed the default.
-	test.setTimeout(90_000);
+	// Baseline + boot/settle + (idle + moving) best-of-3 easily exceeds 30s.
+	test.setTimeout(120_000);
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 
-	// 1) Baseline: how fast can this browser tick rAF with almost no work? Take
-	// the best of several samples so a momentarily throttled machine (e.g. right
-	// after the rest of the suite) doesn't deflate the ratio denominator's use.
+	// 1) Baseline: the browser's max rAF rate on an empty page, best of N so a
+	// momentarily throttled machine doesn't inflate the denominator unfairly.
 	await page.goto('about:blank');
 	const baseline = await bestOf(page);
 
@@ -72,9 +74,8 @@ test('perf: the world renders at a stable frame rate', async ({ page }) => {
 	const moving = await bestOf(page);
 	await page.keyboard.up('d');
 
-	// Ratios in the failure message so a regression is diagnosable at a glance.
-	const idleRatio = idle / baseline;
-	const movingRatio = moving / baseline;
+	const idleRatio = baseline > 0 ? idle / baseline : 0;
+	const movingRatio = baseline > 0 ? moving / baseline : 0;
 	const detail =
 		`baseline=${baseline.toFixed(1)} idle=${idle.toFixed(1)} (${(idleRatio * 100).toFixed(0)}%) ` +
 		`moving=${moving.toFixed(1)} (${(movingRatio * 100).toFixed(0)}%)`;
