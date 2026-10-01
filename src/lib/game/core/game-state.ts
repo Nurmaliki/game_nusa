@@ -230,7 +230,11 @@ export class GameState {
 		}
 
 		this.nodeWork.delete(nodeInstanceId);
-		const yields = rollYield(node, () => this.seededRandom(nodeInstanceId));
+		// Rain boosts fishing yields (BALANCE.weather.rainFishingModifier).
+		const isFishing = (node.skill ?? 'gathering') === 'fishing';
+		const weatherMod =
+			isFishing && this.weather === 'rain' ? BALANCE.weather.rainFishingModifier : 1;
+		const yields = rollYield(node, () => this.seededRandom(nodeInstanceId), weatherMod);
 
 		const added: ItemStack[] = [];
 		for (const y of yields) {
@@ -247,7 +251,13 @@ export class GameState {
 			this.harvestedAt.set(nodeInstanceId, this.clock.dayFraction * 24);
 			this.markNodeHarvested(nodeInstanceId);
 		}
-		if (added.length > 0) this.skills.award('gathering', BALANCE.skills.gatherXpPerHarvest);
+		if (added.length > 0) {
+			// Train the node's skill (fishing nodes train 'fishing', not gathering).
+			const skill = node.skill ?? 'gathering';
+			const xp =
+				skill === 'fishing' ? BALANCE.skills.fishXpPerCatch : BALANCE.skills.gatherXpPerHarvest;
+			this.skills.award(skill, xp);
+		}
 		return ok(added);
 	}
 

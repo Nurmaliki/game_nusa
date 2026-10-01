@@ -210,6 +210,15 @@ export const SFX: Record<string, SfxDefinition> = {
 		duration: 0.9,
 		gain: 0.3,
 		lowpassHz: 600
+	},
+	fish_catch: {
+		id: 'fish_catch',
+		wave: 'triangle',
+		startHz: 320,
+		endHz: 780,
+		attack: 0.008,
+		duration: 0.26,
+		gain: 0.22
 	}
 };
 

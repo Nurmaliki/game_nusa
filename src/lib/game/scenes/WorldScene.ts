@@ -661,9 +661,18 @@ export class WorldScene extends Phaser.Scene {
 		const result = state.harvest(node.typeId, node.instanceId);
 		if (!result.ok) return;
 
+		const def = getResourceNode(node.typeId);
+		const isFishing = (def?.skill ?? 'gathering') === 'fishing';
+
 		this.shake(60, BALANCE.camera.shakeIntensity * 0.6);
-		getGameBus().emit('SFX', { id: 'harvest' });
-		this.feedback.burst(node.worldX, node.worldY - 8, 0xd8c48a, 5);
+		getGameBus().emit('SFX', { id: isFishing ? 'fish_catch' : 'harvest' });
+		// A blue "splash" for fishing, a tan dust puff otherwise.
+		this.feedback.burst(
+			node.worldX,
+			node.worldY - 8,
+			isFishing ? 0x57a9dd : 0xd8c48a,
+			isFishing ? 7 : 5
+		);
 
 		if (!state.nodeHasWork(node.instanceId)) {
 			state.markNodeHarvested(node.instanceId);

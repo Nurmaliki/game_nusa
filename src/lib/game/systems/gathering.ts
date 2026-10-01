@@ -59,12 +59,16 @@ export interface YieldRoll {
 /** Deterministic yield for a completed node (rng passed in for testability). */
 export function rollYield(
 	node: ResourceNodeDefinition,
-	rng: () => number = Math.random
+	rng: () => number = Math.random,
+	modifier = 1
 ): YieldRoll[] {
 	const out: YieldRoll[] = [];
 	for (const y of node.yields) {
 		const spread = y.max - y.min;
-		const qty = spread <= 0 ? y.min : y.min + Math.floor(rng() * (spread + 1));
+		const base = spread <= 0 ? y.min : y.min + Math.floor(rng() * (spread + 1));
+		// Apply the (e.g. rain-for-fishing) modifier, rounding up so a bonus of
+		// 1.2 on a roll of 1 still yields 2 rather than silently doing nothing.
+		const qty = base > 0 ? Math.max(1, Math.round(base * modifier)) : 0;
 		if (qty > 0) out.push({ itemId: y.itemId, qty });
 	}
 	return out;

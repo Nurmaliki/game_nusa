@@ -64,6 +64,16 @@ describe('rollYield', () => {
 		const rolls = rollYield(getResourceNode('bush')!, () => 0.99);
 		expect(rolls.every((r) => r.qty > 0)).toBe(true);
 	});
+
+	it('applies a positive modifier (e.g. rain for fishing)', () => {
+		const plain = rollYield(getResourceNode('fish_shoal')!, () => 0.5);
+		const boosted = rollYield(getResourceNode('fish_shoal')!, () => 0.5, 1.5);
+		expect(boosted[0].qty).toBeGreaterThanOrEqual(plain[0].qty);
+	});
+
+	it('modifier 1 is a no-op', () => {
+		expect(rollYield(tree, () => 0.3, 1)).toEqual(rollYield(tree, () => 0.3));
+	});
 });
 
 describe('respawnHours', () => {

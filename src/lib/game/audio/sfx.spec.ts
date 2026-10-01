@@ -43,7 +43,8 @@ describe('SFX catalogue', () => {
 			'chapter_complete',
 			'level_up',
 			'weather_rain',
-			'weather_thunder'
+			'weather_thunder',
+			'fish_catch'
 		]) {
 			expect(SFX[id], `missing sfx "${id}"`).toBeDefined();
 		}

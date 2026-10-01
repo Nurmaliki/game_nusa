@@ -205,6 +205,21 @@ describe('integration: full gameplay loop', () => {
 		const after = state.skills.serialize().find((s) => s.id === 'gathering')?.xp ?? 0;
 		expect(after).toBeGreaterThan(before);
 	});
+
+	it('fishing nodes train the fishing skill (not gathering)', () => {
+		const state = newGame();
+		const fishingBefore = state.skills.serialize().find((s) => s.id === 'fishing')?.xp ?? 0;
+		const gatheringBefore = state.skills.serialize().find((s) => s.id === 'gathering')?.xp ?? 0;
+		// Equip a fishing rod so the shoal is harvested effectively. The rod is
+		// placed in the first free hotbar slot; select that slot so harvest uses it.
+		state.inventory.add({ id: 'fishing_rod', qty: 1 }, getItem('fishing_rod')!);
+		state.equipment.select(0);
+		harvestUntil(state, 'fish_shoal', 'f1');
+		const fishingAfter = state.skills.serialize().find((s) => s.id === 'fishing')?.xp ?? 0;
+		const gatheringAfter = state.skills.serialize().find((s) => s.id === 'gathering')?.xp ?? 0;
+		expect(fishingAfter).toBeGreaterThan(fishingBefore);
+		expect(gatheringAfter).toBe(gatheringBefore);
+	});
 });
 
 /** Local helper so the test does not import BALANCE directly. */

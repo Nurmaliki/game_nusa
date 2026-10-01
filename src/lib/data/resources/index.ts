@@ -1,4 +1,5 @@
 import type { BiomeId } from '$types/core';
+import type { SkillId } from '$game/systems/skills';
 
 /**
  * Resource node definitions (data-driven). A node type describes what drops,
@@ -21,6 +22,12 @@ export interface ResourceNodeDefinition {
 	respawn: { mode: 'never' } | { mode: 'after_hours'; hours: number };
 	/** Does this node block movement? */
 	solid: boolean;
+	/**
+	 * Skill trained when harvesting this node. Defaults to 'gathering'; fishing
+	 * nodes (e.g. fish shoals) train 'fishing' instead, so the fishing skill can
+	 * actually progress.
+	 */
+	skill?: SkillId;
 }
 
 export const RESOURCE_NODES: Record<string, ResourceNodeDefinition> = {
@@ -224,7 +231,8 @@ export const RESOURCE_NODES: Record<string, ResourceNodeDefinition> = {
 		yields: [{ itemId: 'fish', min: 1, max: 3 }],
 		preferredTools: ['fishing_rod'],
 		respawn: { mode: 'after_hours', hours: 6 },
-		solid: false
+		solid: false,
+		skill: 'fishing'
 	},
 	oyster_bed: {
 		id: 'oyster_bed',
