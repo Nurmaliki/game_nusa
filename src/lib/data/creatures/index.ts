@@ -221,6 +221,32 @@ export const CREATURES: Record<string, CreatureDefinition> = {
 		]
 	},
 
+	// ── Volcanic (tier 3: apex danger of the crater) ────────────────────
+	komodo: {
+		id: 'komodo',
+		name: 'Komodo Kawah',
+		biome: 'volcanic',
+		texture: 'placeholder_predator',
+		behaviour: 'predator',
+		health: 120,
+		damage: 30,
+		speed: 84,
+		attackRange: 48,
+		attackCooldownMs: 1250,
+		knockback: 130,
+		xp: 90,
+		aggroRadius: 260,
+		leash: 560,
+		wanderRadius: 180,
+		attackable: true,
+		loot: [
+			{ itemId: 'meat', chance: 1, min: 3, max: 5 },
+			{ itemId: 'hide', chance: 1, min: 2, max: 3 },
+			{ itemId: 'obsidian_shard', chance: 0.6, min: 1, max: 2 },
+			{ itemId: 'gemstone', chance: 0.15, min: 1, max: 1 }
+		]
+	},
+
 	// ── Tropical coast (tier 1 elite: aquatic ambusher) ─────────────────
 	crocodile: {
 		id: 'crocodile',

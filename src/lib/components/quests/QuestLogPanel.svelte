@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getGameBus } from '$game/core/event-bus';
 	import { getGameSession } from '$stores/game-session.svelte';
-	import { QUEST_LIST } from '$data/quests';
+	import { QUEST_LIST, getQuest } from '$data/quests';
 	import { getItem } from '$data/items';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
@@ -46,7 +46,13 @@
 			session.emitStats();
 			getGameBus().emit('QUEST_UPDATED_UI', { revision: Date.now() });
 			getGameBus().emit('TOAST', { text: `Misi selesai: ${r.value.name}`, kind: 'success' });
-			if (r.value.final) getGameBus().emit('CHAPTER_COMPLETE', undefined);
+			if (r.value.final) {
+				const chapter = getQuest(id)?.chapter ?? 1;
+				getGameBus().emit('CHAPTER_COMPLETE', {
+					chapter,
+					title: chapter === 2 ? 'Pusaka Kawah' : 'Kapal Layar'
+				});
+			}
 		} else {
 			getGameBus().emit('TOAST', { text: 'Belum bisa diselesaikan', kind: 'warning' });
 		}

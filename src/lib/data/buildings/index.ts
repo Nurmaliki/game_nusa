@@ -308,6 +308,21 @@ export const BUILDINGS: Record<string, BuildingDefinition> = {
 		solid: true,
 		behaviour: 'water',
 		unlock: { skill: { id: 'crafting', level: 4 } }
+	},
+	obsidian_forge: {
+		id: 'obsidian_forge',
+		name: 'Perapian Obsidian',
+		description: 'Tungku vulkanik untuk menempa obsidian menjadi zirah dan senjata Bab II.',
+		texture: 'placeholder_tile',
+		size: { w: 2, h: 2 },
+		requires: [
+			{ id: 'obsidian_shard', qty: 8 },
+			{ id: 'stone', qty: 20 },
+			{ id: 'iron_ingot', qty: 6 }
+		],
+		solid: true,
+		station: 'obsidian_forge',
+		unlock: { skill: { id: 'crafting', level: 6 } }
 	}
 };
 

@@ -5,12 +5,19 @@ import { BALANCE } from '../config/balance';
 const SEED = 12345;
 
 describe('ChunkManager biomeAt', () => {
-	it('coast at the edges, highlands at the centre', () => {
+	it('coast at the edges, rainforest, highlands, then the volcanic core', () => {
 		const cm = new ChunkManager(SEED);
-		const edge = cm.biomeAt(10, 10);
-		const center = cm.biomeAt(cm.pixelWidth / 2, cm.pixelHeight / 2);
-		expect(edge.id).toBe('tropical_coast');
-		expect(center.id).toBe('highlands');
+		// Walk from the centre (normalized distance 1) out to the edge (0). The
+		// bands are: volcanic >=0.90, highlands >=0.74, rainforest >=0.42, coast.
+		const cx = cm.pixelWidth / 2;
+		const cy = cm.pixelHeight / 2;
+		const half = Math.min(cm.pixelWidth, cm.pixelHeight) / 2;
+		const atOutward = (outward: number) => cm.biomeAt(cx + half * outward, cy).id; // offset along +x
+		expect(atOutward(0.7)).toBe('tropical_coast');
+		expect(atOutward(0.5)).toBe('rainforest');
+		expect(atOutward(0.2)).toBe('highlands');
+		expect(atOutward(0.02)).toBe('volcanic');
+		expect(cm.biomeAt(cx, cy).id).toBe('volcanic');
 	});
 
 	it('is deterministic for the same seed', () => {

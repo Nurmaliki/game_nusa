@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { ball, ellipse, mix, paint, poly, rect, shade, vgrad } from './art';
+import { SPRITE_KEYS, resourceTexture, creatureTexture } from './sprite-keys';
+
+export { SPRITE_KEYS, resourceTexture, creatureTexture };
 
 /**
  * Programmatic sprite painters (see §35).
@@ -424,6 +427,84 @@ function oysterBed(g: Phaser.GameObjects.Graphics): void {
 	ball(g, 28, 20, 1, 0xf2f4f7);
 }
 
+/** Volcanic obsidian: a dark glassy boulder with sharp facets. */
+function obsidianRock(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 34, 18, 5, 0x000000, 0.2);
+	poly(
+		g,
+		[
+			[7, 32],
+			[12, 12],
+			[24, 8],
+			[36, 20],
+			[32, 34]
+		],
+		0x241f2b
+	);
+	// Glassy facet highlights.
+	poly(
+		g,
+		[
+			[12, 12],
+			[24, 8],
+			[22, 22]
+		],
+		0x3a3348
+	);
+	poly(
+		g,
+		[
+			[24, 8],
+			[36, 20],
+			[24, 24]
+		],
+		0x453f57
+	);
+	g.lineStyle(1, 0x5b5470, 1);
+	g.lineBetween(22, 22, 32, 34);
+	g.lineBetween(22, 22, 11, 30);
+	ball(g, 16, 16, 1, 0x8a86a8);
+}
+
+/** A sulfur vent: a cracked mound crusted with yellow deposits and fumes. */
+function sulfurVent(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 30, 17, 6, 0x000000, 0.18);
+	ellipse(g, 22, 24, 16, 11, 0x4a4038);
+	ellipse(g, 22, 22, 12, 8, 0x2f2a24);
+	// Vent mouth.
+	ellipse(g, 22, 22, 6, 4, 0x141210);
+	// Sulfur crust around the rim.
+	for (const [x, y, r] of [
+		[14, 20, 3],
+		[30, 21, 3],
+		[20, 27, 3],
+		[26, 26, 2],
+		[22, 16, 2]
+	] as [number, number, number][]) {
+		ball(g, x, y, r, 0xd9cf3a);
+		ball(g, x - 1, y - 1, Math.max(1, r - 1), 0xf3ec7a);
+	}
+	// Faint fumes.
+	ellipse(g, 22, 12, 4, 3, 0xb9c2c4, 0.35);
+	ellipse(g, 25, 8, 2, 2, 0xb9c2c4, 0.25);
+}
+
+/** A gem vein: a dark rock banded with glowing crystals. */
+function gemVein(g: Phaser.GameObjects.Graphics): void {
+	boulder(g, 0x3a3348);
+	const gems: [number, number, number][] = [
+		[16, 20, 3],
+		[25, 24, 3],
+		[20, 15, 2],
+		[28, 17, 2]
+	];
+	for (const [x, y, r] of gems) {
+		ball(g, x, y, r, 0x37d0c8);
+		ball(g, x - 1, y - 1, Math.max(1, r - 1), 0x9df3ee);
+	}
+	ball(g, 15, 19, 1, 0xffffff);
+}
+
 function boulder(g: Phaser.GameObjects.Graphics, tone: number): void {
 	poly(
 		g,
@@ -739,6 +820,60 @@ function wolf(g: Phaser.GameObjects.Graphics): void {
 	for (const x of [14, 22, 30] as number[]) rect(g, x, 32, 4, 8, shade(grey, 0.8));
 }
 
+/** A komodo dragon: a low, long volcanic lizard with a heavy tail. */
+function komodo(g: Phaser.GameObjects.Graphics): void {
+	const body = 0x5a6b3a;
+	const dark = 0x3f4d2a;
+	ellipse(g, 26, 26, 17, 9, body); // torso
+	// Long heavy tail.
+	poly(
+		g,
+		[
+			[10, 24],
+			[0, 20],
+			[4, 30],
+			[10, 30]
+		],
+		dark
+	);
+	// Head + neck.
+	ellipse(g, 46, 22, 8, 7, shade(body, 1.06));
+	poly(
+		g,
+		[
+			[40, 20],
+			[48, 18],
+			[44, 28],
+			[38, 27]
+		],
+		shade(body, 1.06)
+	);
+	ball(g, 48, 20, 1.6, 0xf4d03f); // amber eye
+	ball(g, 48, 20, 0.7, 0x0a0a0a);
+	// Forked tongue.
+	g.lineStyle(1, 0xd9534f, 1);
+	g.lineBetween(52, 24, 58, 25);
+	g.lineBetween(58, 25, 60, 23);
+	g.lineBetween(58, 25, 60, 27);
+	// Scaly back ridge.
+	for (const x of [18, 24, 30, 36] as number[]) {
+		poly(
+			g,
+			[
+				[x, 17],
+				[x + 2, 13],
+				[x + 4, 17]
+			],
+			dark
+		);
+	}
+	// Legs with claws.
+	for (const x of [16, 30] as number[]) {
+		rect(g, x, 32, 5, 7, shade(body, 0.8));
+		rect(g, x, 37, 5, 2, dark);
+	}
+}
+
 function fish(g: Phaser.GameObjects.Graphics): void {
 	ellipse(g, 22, 22, 12, 8, 0x4aa3d8);
 	ellipse(g, 22, 20, 10, 4, 0x7cc6ec);
@@ -805,112 +940,6 @@ function npc(g: Phaser.GameObjects.Graphics, cloth: number, skin: number): void 
 
 // ── Public painters ────────────────────────────────────────────────────
 
-export const SPRITE_KEYS = {
-	player: 'sprite_player',
-	tree: 'sprite_tree',
-	pine: 'sprite_pine',
-	palm: 'sprite_palm',
-	bamboo: 'sprite_bamboo',
-	rock: 'sprite_rock',
-	ironVein: 'sprite_iron_vein',
-	goldVein: 'sprite_gold_vein',
-	bush: 'sprite_bush',
-	berryBush: 'sprite_berry_bush',
-	herb: 'sprite_herb',
-	mushroom: 'sprite_mushroom',
-	rarePlant: 'sprite_rare_plant',
-	shellPile: 'sprite_shell_pile',
-	clayMound: 'sprite_clay_mound',
-	saltFlat: 'sprite_salt_flat',
-	sandBank: 'sprite_sand_bank',
-	ruinCache: 'sprite_ruin_cache',
-	oysterBed: 'sprite_oyster_bed',
-	fish: 'sprite_fish',
-	crab: 'sprite_crab',
-	seagull: 'sprite_seagull',
-	boar: 'sprite_boar',
-	monkey: 'sprite_monkey',
-	snake: 'sprite_snake',
-	hawk: 'sprite_hawk',
-	tiger: 'sprite_tiger',
-	crocodile: 'sprite_crocodile',
-	wolf: 'sprite_wolf',
-	npc: 'sprite_npc',
-	tileGrass: 'tile_grass',
-	tileSand: 'tile_sand',
-	tileRock: 'tile_rock'
-} as const;
-
-/** Biome-agnostic key for a resource node type (falls back to a generic). */
-export function resourceTexture(nodeTypeId: string): string {
-	switch (nodeTypeId) {
-		case 'tree':
-			return SPRITE_KEYS.tree;
-		case 'hardwood_tree':
-			return SPRITE_KEYS.pine;
-		case 'palm':
-			return SPRITE_KEYS.palm;
-		case 'bamboo_grove':
-			return SPRITE_KEYS.bamboo;
-		case 'rock':
-			return SPRITE_KEYS.rock;
-		case 'clay_mound':
-			return SPRITE_KEYS.clayMound;
-		case 'iron_vein':
-			return SPRITE_KEYS.ironVein;
-		case 'gold_vein':
-			return SPRITE_KEYS.goldVein;
-		case 'bush':
-			return SPRITE_KEYS.berryBush;
-		case 'herb_patch':
-			return SPRITE_KEYS.herb;
-		case 'mushroom_patch':
-			return SPRITE_KEYS.mushroom;
-		case 'rare_plant':
-			return SPRITE_KEYS.rarePlant;
-		case 'shell_pile':
-			return SPRITE_KEYS.shellPile;
-		case 'oyster_bed':
-			return SPRITE_KEYS.oysterBed;
-		case 'salt_flat':
-			return SPRITE_KEYS.saltFlat;
-		case 'sand_bank':
-			return SPRITE_KEYS.sandBank;
-		case 'ruin_cache':
-			return SPRITE_KEYS.ruinCache;
-		case 'fish_shoal':
-			return SPRITE_KEYS.fish;
-		default:
-			return SPRITE_KEYS.bush;
-	}
-}
-
-/** Key for a creature species id (falls back to a generic critter). */
-export function creatureTexture(creatureId: string): string {
-	switch (creatureId) {
-		case 'crab':
-			return SPRITE_KEYS.crab;
-		case 'seagull':
-			return SPRITE_KEYS.seagull;
-		case 'boar':
-			return SPRITE_KEYS.boar;
-		case 'monkey':
-			return SPRITE_KEYS.monkey;
-		case 'snake':
-			return SPRITE_KEYS.snake;
-		case 'hawk':
-			return SPRITE_KEYS.hawk;
-		case 'tiger':
-			return SPRITE_KEYS.tiger;
-		case 'crocodile':
-			return SPRITE_KEYS.crocodile;
-		case 'wolf':
-			return SPRITE_KEYS.wolf;
-		default:
-			return SPRITE_KEYS.monkey;
-	}
-}
-
 /**
  * Draw every sprite texture the world needs. Idempotent; call once per scene
  * (BootScene) before the world renders.
@@ -946,6 +975,9 @@ export function ensureSprites(scene: Phaser.Scene): void {
 	P(SPRITE_KEYS.sandBank, 44, 34, (g) => sandBank(g));
 	P(SPRITE_KEYS.ruinCache, 44, 38, (g) => ruinCache(g));
 	P(SPRITE_KEYS.oysterBed, 44, 34, (g) => oysterBed(g));
+	P(SPRITE_KEYS.obsidianRock, 44, 38, (g) => obsidianRock(g));
+	P(SPRITE_KEYS.sulfurVent, 44, 36, (g) => sulfurVent(g));
+	P(SPRITE_KEYS.gemVein, 44, 40, (g) => gemVein(g));
 	P(SPRITE_KEYS.fish, 44, 44, (g) => fish(g));
 
 	// Creatures.
@@ -958,6 +990,7 @@ export function ensureSprites(scene: Phaser.Scene): void {
 	P(SPRITE_KEYS.tiger, 52, 44, (g) => tiger(g));
 	P(SPRITE_KEYS.crocodile, 56, 40, (g) => crocodile(g));
 	P(SPRITE_KEYS.wolf, 52, 42, (g) => wolf(g));
+	P(SPRITE_KEYS.komodo, 60, 42, (g) => komodo(g));
 
 	// Actors & structures.
 	P(SPRITE_KEYS.player, 32, 32, (g) => player(g));

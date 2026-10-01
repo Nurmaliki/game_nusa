@@ -95,7 +95,7 @@ export interface GameEventMap {
 	DIALOGUE_CLOSED: void;
 	NPC_NEARBY: { npcId: string | null; name: string | null };
 	QUEST_UPDATED_UI: { revision: number };
-	CHAPTER_COMPLETE: void;
+	CHAPTER_COMPLETE: { chapter: number; title: string };
 	SKILLS_CHANGED: { skills: { id: string; level: number; xp: number }[] };
 	/** A skill reached a new level (id + new level) — drives SFX + UI toast. */
 	SKILL_LEVEL_UP: { id: string; level: number };

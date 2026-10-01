@@ -16,7 +16,7 @@ export interface GridCoord {
 
 export type GamePhase = 'boot' | 'menu' | 'playing' | 'paused' | 'dead' | 'ending';
 
-export type BiomeId = 'tropical_coast' | 'rainforest' | 'highlands';
+export type BiomeId = 'tropical_coast' | 'rainforest' | 'highlands' | 'volcanic';
 
 export type WeatherId = 'clear' | 'rain' | 'storm' | 'fog' | 'wind';
 

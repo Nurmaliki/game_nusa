@@ -19,6 +19,7 @@
 	import { getGameBus } from '$game/core/event-bus';
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { getItem } from '$data/items';
+	import { getQuest } from '$data/quests';
 	import { deviceStore, shouldShowTouchControls } from '$stores/device.svelte';
 	import { settingsStore } from '$stores/settings.svelte';
 	import { getAudioManager } from '$game/audio/audio-manager';
@@ -91,7 +92,13 @@
 						session.notifyInventory();
 						session.emitStats();
 						getGameBus().emit('QUEST_UPDATED_UI', { revision: Date.now() });
-						if (r.value.final) getGameBus().emit('CHAPTER_COMPLETE', undefined);
+						if (r.value.final) {
+							const chapter = getQuest(id)?.chapter ?? 1;
+							getGameBus().emit('CHAPTER_COMPLETE', {
+								chapter,
+								title: chapter === 2 ? 'Pusaka Kawah' : 'Kapal Layar'
+							});
+						}
 					}
 					return r;
 				},
@@ -120,13 +127,16 @@
 						state.grantLoot([], () => 0.5, creatureId);
 					}
 				},
-				completeChapter: () => {
+				completeChapter: (chapter = 1) => {
 					const state = session.state;
 					if (!state) return;
 					// Drive the final quest straight to COMPLETED for the E2E
 					// assertion path; uses the same public quest API.
 					state.chapterComplete = true;
-					getGameBus().emit('CHAPTER_COMPLETE', undefined);
+					getGameBus().emit('CHAPTER_COMPLETE', {
+						chapter,
+						title: chapter === 2 ? 'Pusaka Kawah' : 'Kapal Layar'
+					});
 				},
 				harvest: (nodeId: string, instanceId: string) => session.state?.harvest(nodeId, instanceId),
 				count: (itemId: string) => session.state?.inventory.count(itemId) ?? 0,

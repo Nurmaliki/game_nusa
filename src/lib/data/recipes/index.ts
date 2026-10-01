@@ -10,7 +10,8 @@ export interface RecipeDefinition {
 	id: string;
 	name: string;
 	/** Station required. 'hand' means craftable anywhere. */
-	station: 'hand' | 'campfire' | 'workbench' | 'cooking_station' | 'boat_workshop';
+	station:
+		'hand' | 'campfire' | 'workbench' | 'cooking_station' | 'boat_workshop' | 'obsidian_forge';
 	ingredients: ItemStack[];
 	outputs: ItemStack[];
 	/** Real-time crafting duration in ms (0 = instant). */
@@ -554,6 +555,61 @@ export const RECIPES: Record<string, RecipeDefinition> = {
 		outputs: [{ id: 'pearl_necklace', qty: 1 }],
 		durationMs: 1500,
 		unlock: { skill: { id: 'crafting', level: 4 } }
+	},
+
+	// ── Chapter II: obsidian tier (requires the volcanic forge) ─────────
+	obsidian_pickaxe: {
+		id: 'obsidian_pickaxe',
+		name: 'Beliung Obsidian',
+		station: 'obsidian_forge',
+		ingredients: [
+			{ id: 'obsidian_shard', qty: 6 },
+			{ id: 'iron_ingot', qty: 4 },
+			{ id: 'rope', qty: 2 }
+		],
+		outputs: [{ id: 'obsidian_pickaxe', qty: 1, durability: 320 }],
+		durationMs: 2600,
+		unlock: { skill: { id: 'crafting', level: 6 } }
+	},
+	obsidian_blade: {
+		id: 'obsidian_blade',
+		name: 'Pedang Obsidian',
+		station: 'obsidian_forge',
+		ingredients: [
+			{ id: 'obsidian_shard', qty: 8 },
+			{ id: 'iron_ingot', qty: 6 },
+			{ id: 'gold_ore', qty: 2 }
+		],
+		outputs: [{ id: 'obsidian_blade', qty: 1, durability: 140 }],
+		durationMs: 3400,
+		unlock: { skill: { id: 'crafting', level: 6 } }
+	},
+	obsidian_armor: {
+		id: 'obsidian_armor',
+		name: 'Zirah Obsidian',
+		station: 'obsidian_forge',
+		ingredients: [
+			{ id: 'obsidian_shard', qty: 12 },
+			{ id: 'croc_hide', qty: 4 },
+			{ id: 'iron_ingot', qty: 8 }
+		],
+		outputs: [{ id: 'obsidian_armor', qty: 1 }],
+		durationMs: 4200,
+		unlock: { skill: { id: 'crafting', level: 7 } }
+	},
+	crater_ward: {
+		id: 'crater_ward',
+		name: 'Pusaka Kawah',
+		station: 'obsidian_forge',
+		ingredients: [
+			{ id: 'gemstone', qty: 3 },
+			{ id: 'obsidian_shard', qty: 10 },
+			{ id: 'sulfur', qty: 8 },
+			{ id: 'gold_ore', qty: 4 }
+		],
+		outputs: [{ id: 'crater_ward', qty: 1 }],
+		durationMs: 6000,
+		unlock: { skill: { id: 'crafting', level: 8 } }
 	}
 };
 

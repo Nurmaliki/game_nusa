@@ -60,7 +60,9 @@ describe('V1 content breadth', () => {
 	});
 
 	it('every recipe output is reachable from a known station', () => {
-		const stations = new Set(['hand', 'campfire', 'workbench', 'cooking_station', 'boat_workshop']);
+		// Derive the stations actually used by recipes so new ones (e.g. the
+		// Chapter II obsidian forge) must be provided by a building.
+		const stations = new Set(RECIPE_LIST.map((r) => r.station));
 		const provided = new Set(
 			BUILDING_LIST.filter((b) => b.station).map((b) => b.station as string)
 		);
@@ -77,6 +79,7 @@ describe('V1 content referential integrity', () => {
 	const nodeIds = new Set(RESOURCE_NODE_LIST.map((n) => n.id));
 	const creatureIds = new Set(CREATURE_LIST.map((c) => c.id));
 	const questIds = new Set(QUEST_LIST.map((q) => q.id));
+	const biomeIds = new Set<string>(BIOME_LIST.map((b) => b.id));
 
 	it('every resource node yield resolves to an item with a valid range', () => {
 		for (const node of RESOURCE_NODE_LIST) {
@@ -191,9 +194,46 @@ describe('V1 content referential integrity', () => {
 		}
 	});
 
-	it('exactly one quest is flagged as the chapter finale', () => {
+	it('has exactly one finale per chapter', () => {
 		const finals = QUEST_LIST.filter((q) => q.final);
-		expect(finals).toHaveLength(1);
+		// Chapter I ends with the boat; Chapter II ends with the crater ward.
+		expect(finals).toHaveLength(2);
+		expect(finals.map((q) => q.id)).toEqual(['chapter1_boat', 'chapter2_ward']);
+		// Each finale must actually have prerequisites (it is the tip of a chain).
+		for (const f of finals) expect(f.prerequisites.length).toBeGreaterThan(0);
+	});
+
+	it('Chapter II forms a single chain that begins at the Chapter I finale', () => {
+		const chapter2 = QUEST_LIST.filter((q) => (q.chapter ?? 1) === 2);
+		expect(chapter2.length).toBeGreaterThanOrEqual(4);
+		// Exactly one entry point, gated only on the Chapter I finale.
+		const roots = chapter2.filter(
+			(q) => q.prerequisites.length === 1 && q.prerequisites[0] === 'chapter1_boat'
+		);
+		expect(roots).toHaveLength(1);
+		// Every other Chapter II quest depends on another Chapter II quest, so the
+		// arc is a connected chain (no orphan side-quests shipped accidentally).
+		for (const q of chapter2) {
+			if (q.id === roots[0].id) continue;
+			expect(
+				q.prerequisites.some((p) => chapter2.some((c) => c.id === p)),
+				`${q.id} is not connected to the Chapter II chain`
+			).toBe(true);
+		}
+		// Chapter II objectives must reference targets that actually exist.
+		for (const q of chapter2) {
+			for (const obj of q.objectives) {
+				if (obj.kind === 'gather' || obj.kind === 'craft')
+					expect(itemIds.has(obj.target), `${q.id}/${obj.id} unknown item "${obj.target}"`).toBe(
+						true
+					);
+				if (obj.kind === 'defeat' || obj.kind === 'reach')
+					expect(
+						creatureIds.has(obj.target) || biomeIds.has(obj.target),
+						`${q.id}/${obj.id} unknown target "${obj.target}"`
+					).toBe(true);
+			}
+		}
 	});
 
 	it('every NPC dialogue choice references a known quest', () => {

@@ -52,6 +52,8 @@ export interface QuestDefinition {
 	rewards: QuestReward;
 	/** Completing this quest marks the chapter complete (final quest). */
 	final?: boolean;
+	/** Chapter number this quest belongs to (1-based). Defaults to 1. */
+	chapter?: number;
 }
 
 export const QUESTS: Record<string, QuestDefinition> = {
@@ -223,6 +225,142 @@ export const QUESTS: Record<string, QuestDefinition> = {
 			skillXp: { crafting: 200 },
 			relationshipNpc: 'tokoh_lelluhur',
 			relationshipAmount: 2
+		},
+		final: true
+	},
+
+	// ── Chapter II: the volcanic crater ─────────────────────────────────
+	chapter2_ashore: {
+		id: 'chapter2_ashore',
+		name: 'Mendarat di Kawah',
+		description:
+			'Perahu membawamu ke pulau kedua. Roh Leluhur memintamu menuju jantung pulau: kawah vulkanik.',
+		giver: 'tokoh_lelluhur',
+		chapter: 2,
+		prerequisites: ['chapter1_boat'],
+		objectives: [
+			{
+				id: 'reach_volcanic',
+				description: 'Jelajahi Kawah Vulkanik',
+				kind: 'reach',
+				target: 'volcanic',
+				count: 1
+			}
+		],
+		rewards: {
+			skillXp: { survival: 100 }
+		}
+	},
+	chapter2_obsidian: {
+		id: 'chapter2_obsidian',
+		name: 'Kaca Vulkanik',
+		description: 'Kumpulkan obsidian dan belerang dari kawah untuk menempa peralatan baru.',
+		giver: 'tokoh_lelluhur',
+		chapter: 2,
+		prerequisites: ['chapter2_ashore'],
+		objectives: [
+			{
+				id: 'gather_obsidian',
+				description: 'Kumpulkan 6 pecahan obsidian',
+				kind: 'gather',
+				target: 'obsidian_shard',
+				count: 6,
+				consume: false
+			},
+			{
+				id: 'gather_sulfur',
+				description: 'Kumpulkan 4 belerang',
+				kind: 'gather',
+				target: 'sulfur',
+				count: 4,
+				consume: false
+			}
+		],
+		rewards: {
+			skillXp: { gathering: 150 },
+			items: [{ id: 'herbal_tonic', qty: 3 }]
+		}
+	},
+	chapter2_forge: {
+		id: 'chapter2_forge',
+		name: 'Perapian Obsidian',
+		description: 'Bangun perapian obsidian dan tempa beliung vulkanik.',
+		giver: 'tokoh_lelluhur',
+		chapter: 2,
+		prerequisites: ['chapter2_obsidian'],
+		objectives: [
+			{
+				id: 'build_forge',
+				description: 'Bangun perapian obsidian',
+				kind: 'build',
+				target: 'obsidian_forge',
+				count: 1
+			},
+			{
+				id: 'craft_pickaxe',
+				description: 'Tempa beliung obsidian',
+				kind: 'craft',
+				target: 'obsidian_pickaxe',
+				count: 1,
+				consume: false
+			}
+		],
+		rewards: {
+			skillXp: { crafting: 200 }
+		}
+	},
+	chapter2_beast: {
+		id: 'chapter2_beast',
+		name: 'Komodo Kawah',
+		description: 'Naga darat menjaga permata di jantung kawah. Kalahkan penjaganya.',
+		giver: 'tokoh_lelluhur',
+		chapter: 2,
+		prerequisites: ['chapter2_forge'],
+		objectives: [
+			{
+				id: 'defeat_komodo',
+				description: 'Kalahkan Komodo Kawah',
+				kind: 'defeat',
+				target: 'komodo',
+				count: 1
+			},
+			{
+				id: 'gather_gem',
+				description: 'Dapatkan 1 permata kawah',
+				kind: 'gather',
+				target: 'gemstone',
+				count: 1,
+				consume: false
+			}
+		],
+		rewards: {
+			skillXp: { combat: 250 },
+			relationshipNpc: 'tokoh_lelluhur',
+			relationshipAmount: 2
+		}
+	},
+	chapter2_ward: {
+		id: 'chapter2_ward',
+		name: 'Pusaka Kawah',
+		description:
+			'Tempa pusaka dari permata kawah untuk menenangkan roh gunung dan menuntaskan perjalananmu.',
+		giver: 'tokoh_lelluhur',
+		chapter: 2,
+		prerequisites: ['chapter2_beast'],
+		objectives: [
+			{
+				id: 'craft_ward',
+				description: 'Tempa pusaka kawah',
+				kind: 'craft',
+				target: 'crater_ward',
+				count: 1,
+				consume: false
+			}
+		],
+		rewards: {
+			skillXp: { crafting: 400 },
+			relationshipNpc: 'tokoh_lelluhur',
+			relationshipAmount: 3
 		},
 		final: true
 	}

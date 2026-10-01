@@ -6,7 +6,7 @@
  * the tile's position relative to the island centre + world seed jitter.
  */
 export interface BiomeDefinition {
-	id: 'tropical_coast' | 'rainforest' | 'highlands';
+	id: 'tropical_coast' | 'rainforest' | 'highlands' | 'volcanic';
 	name: string;
 	/** Ordered difficulty tier (0 = starter). */
 	tier: number;
@@ -104,6 +104,20 @@ export const BIOMES: Record<string, BiomeDefinition> = {
 		resourceWeights: { rock: 16, iron_vein: 18, rare_plant: 8, ruin_cache: 4, gold_vein: 3 },
 		wildlife: ['hawk', 'tiger', 'wolf'],
 		threat: 0.85
+	},
+	volcanic: {
+		id: 'volcanic',
+		name: 'Kawah Vulkanik',
+		tier: 3,
+		startRadius: 0.9,
+		groundColor: 0x3a2f33,
+		groundColorAlt: 0x2e2529,
+		ambientTint: 0x2a0a04,
+		ambientAlpha: 0.22,
+		resourceTypes: ['obsidian', 'sulfur_vent', 'rock_gem'],
+		resourceWeights: { obsidian: 18, sulfur_vent: 12, rock_gem: 5 },
+		wildlife: ['komodo'],
+		threat: 1
 	}
 };
 

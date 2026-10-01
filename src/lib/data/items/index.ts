@@ -163,6 +163,44 @@ export const ITEMS: Record<string, ItemDefinition> = {
 		effects: { hunger: 35, health: 8 }
 	},
 
+	// ── Volcanic resources (Chapter II, Kawah Vulkanik) ─────────────────
+	obsidian_shard: {
+		id: 'obsidian_shard',
+		name: 'Pecahan Obsidian',
+		description: 'Kaca vulkanik tajam dari kawah; kuat dan ringan.',
+		category: 'resource',
+		stackSize: 50,
+		weight: 1.5,
+		rarity: 'rare',
+		icon: 'placeholder_rock',
+		sellValue: 22,
+		tags: ['obsidian', 'volcanic']
+	},
+	sulfur: {
+		id: 'sulfur',
+		name: 'Belerang',
+		description: 'Serbuk kuning dari semburan kawah; bahan peledak dan obat.',
+		category: 'material',
+		stackSize: 50,
+		weight: 1,
+		rarity: 'uncommon',
+		icon: 'placeholder_bush',
+		sellValue: 9,
+		tags: ['sulfur', 'volcanic']
+	},
+	gemstone: {
+		id: 'gemstone',
+		name: 'Permata',
+		description: 'Kristal langka dari jantung kawah; sangat berharga.',
+		category: 'resource',
+		stackSize: 20,
+		weight: 1,
+		rarity: 'special',
+		icon: 'placeholder_rock',
+		sellValue: 120,
+		tags: ['gem', 'volcanic', 'treasure']
+	},
+
 	// ── Creature drops ──────────────────────────────────────────────────
 	hide: {
 		id: 'hide',
@@ -596,6 +634,20 @@ export const ITEMS: Record<string, ItemDefinition> = {
 		questCritical: true,
 		noDrop: true
 	},
+	crater_ward: {
+		id: 'crater_ward',
+		name: 'Pusaka Kawah',
+		description: 'Jimat yang menenangkan roh kawah; kunci untuk menutup Bab II.',
+		category: 'quest',
+		stackSize: 1,
+		weight: 0.5,
+		rarity: 'quest',
+		icon: 'placeholder_rock',
+		sellValue: 0,
+		tags: ['quest'],
+		questCritical: true,
+		noDrop: true
+	},
 
 	// ── Refined materials (tier 2) ──────────────────────────────────────
 	rope: {
@@ -932,6 +984,47 @@ export const ITEMS: Record<string, ItemDefinition> = {
 			resourceCompatibility: ['clay', 'sand']
 		}
 	},
+	obsidian_pickaxe: {
+		id: 'obsidian_pickaxe',
+		name: 'Beliung Obsidian',
+		description: 'Beliung vulkanik terkuat; menembus urat permata kawah.',
+		category: 'tool',
+		stackSize: 1,
+		weight: 2,
+		rarity: 'special',
+		icon: 'placeholder_rock',
+		sellValue: 150,
+		tags: ['tool', 'pickaxe', 'volcanic'],
+		tool: {
+			kind: 'pickaxe',
+			gatherPower: 6,
+			speed: 1.8,
+			durability: 320,
+			resourceCompatibility: ['stone']
+		}
+	},
+	obsidian_blade: {
+		id: 'obsidian_blade',
+		name: 'Pedang Obsidian',
+		description: 'Bilah kaca vulkanik sekeras baja; senjata terbaik di pulau.',
+		category: 'weapon',
+		stackSize: 1,
+		weight: 2,
+		rarity: 'special',
+		icon: 'placeholder_rock',
+		sellValue: 170,
+		tags: ['weapon', 'sword', 'volcanic'],
+		weapon: {
+			family: 'sword',
+			damage: 30,
+			attackSpeed: 1.1,
+			range: 50,
+			energyCost: 6,
+			criticalChance: 0.16,
+			durabilityCost: 1,
+			durability: 140
+		}
+	},
 
 	// ── Armor ───────────────────────────────────────────────────────────
 	fiber_tunic: {
@@ -985,6 +1078,19 @@ export const ITEMS: Record<string, ItemDefinition> = {
 		sellValue: 90,
 		tags: ['armor', 'heavy'],
 		armor: { damageReduction: 0.42, durability: 280 }
+	},
+	obsidian_armor: {
+		id: 'obsidian_armor',
+		name: 'Zirah Obsidian',
+		description: 'Lempeng obsidian ringan namun sangat keras dari kawah.',
+		category: 'armor',
+		stackSize: 1,
+		weight: 4,
+		rarity: 'special',
+		icon: 'placeholder_tile',
+		sellValue: 160,
+		tags: ['armor', 'volcanic'],
+		armor: { damageReduction: 0.52, durability: 360 }
 	},
 
 	// ── Ammunition & farming ────────────────────────────────────────────

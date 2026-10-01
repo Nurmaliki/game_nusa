@@ -247,6 +247,45 @@ export const RESOURCE_NODES: Record<string, ResourceNodeDefinition> = {
 		preferredTools: ['knife'],
 		respawn: { mode: 'after_hours', hours: 36 },
 		solid: false
+	},
+	obsidian: {
+		id: 'obsidian',
+		name: 'Bebatuan Obsidian',
+		biome: 'volcanic',
+		texture: 'placeholder_rock',
+		work: 12,
+		yields: [
+			{ itemId: 'obsidian_shard', min: 1, max: 2 },
+			{ itemId: 'stone', min: 1, max: 3 }
+		],
+		preferredTools: ['pickaxe'],
+		respawn: { mode: 'after_hours', hours: 48 },
+		solid: true
+	},
+	sulfur_vent: {
+		id: 'sulfur_vent',
+		name: 'Semburan Belerang',
+		biome: 'volcanic',
+		texture: 'placeholder_rock',
+		work: 3,
+		yields: [{ itemId: 'sulfur', min: 1, max: 3 }],
+		preferredTools: ['knife'],
+		respawn: { mode: 'after_hours', hours: 20 },
+		solid: false
+	},
+	rock_gem: {
+		id: 'rock_gem',
+		name: 'Urat Permata',
+		biome: 'volcanic',
+		texture: 'placeholder_rock',
+		work: 16,
+		yields: [
+			{ itemId: 'gemstone', min: 1, max: 1 },
+			{ itemId: 'obsidian_shard', min: 1, max: 2 }
+		],
+		preferredTools: ['pickaxe'],
+		respawn: { mode: 'after_hours', hours: 72 },
+		solid: true
 	}
 };
 
