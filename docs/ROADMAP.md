@@ -439,3 +439,44 @@ no external assets:
 
 Verified with real screenshots (Playwright) and two consecutive full green E2E
 runs. `check`, `lint`, `test:unit` (347), `build`, `test:e2e` (18) all pass.
+
+## Post-release: Polish & Live-ness Pass
+
+A second polish round after the visual overhaul, aimed at making the world feel
+alive and the project ship-ready. All engine-free layering preserved; still zero
+external assets.
+
+- **Distinct node art** (`core/sprites.ts`): node types that previously shared
+  the boulder sprite now have their own painters — a clay mound (rounded, dug
+  top), a cracked salt flat, a rippled sand bank, a mossy ruin cache with a
+  chest niche, and a clustered oyster bed. Players can now tell resources apart
+  at a glance.
+- **Game feel** (`world/feedback.ts`, presentation-only): floating damage/loot
+  numbers and short impact particle bursts on attacks, incoming hits, and
+  harvests. All amplitudes/timings live in `BALANCE.feedback`.
+- **Idle animation** (`world/animation.ts`, pure + unit-tested): a gentle sine
+  "bob" applied to creatures and NPCs (each with a stable per-entity phase so
+  they don't move in lockstep) and a subtle idle "breath" scale on the player
+  that never touches its physics body.
+- **Skill level-ups surfaced** (`systems/skills.ts`): `Skills.award()` records
+  level-ups, drained by the scene to emit `SKILLS_CHANGED` + `SKILL_LEVEL_UP`
+  (new `level_up` SFX) and a toast. `SKILLS_CHANGED` was declared but never
+  emitted before; `SKILL_LABELS` is now the single source of truth (was
+  duplicated in the HUD).
+- **Inventory QoL** (`core/inventory.ts` + `InventoryPanel`): a pure `sortSlots`
+  (category → rarity → name → durability) behind a "Rapikan" tidy button, plus
+  drag-and-drop reorder/merge between slots.
+- **Mobile texture memory** (`chunk-renderer.ts`): the per-chunk ground bake now
+  renders at `BALANCE.world.groundBakeScale` (default 0.5 → 512², ~1 MB/chunk)
+  via a downscale blit, cutting ground VRAM ~4× for low-end devices.
+- **Accessibility** (`world/feedback.ts`, renderers, `WorldScene`): reduced
+  motion now suppresses particles/bob and holds floating numbers in place
+  (previously only screen shake and damage flash honoured the setting).
+- **Performance guard** (`tests/e2e/perf.e2e.ts`): samples a same-browser rAF
+  baseline, then asserts the game runs at a healthy fraction of it — catching a
+  render stall like the ~5 fps ground bug without a brittle absolute floor.
+- **CI** (`.github/workflows/ci.yml`): lint + svelte-check + unit + build, then
+  a Playwright E2E job. Green on GitHub Actions.
+
+Gate after this pass: `check`, `lint`, `test:unit` (366), `build`, `test:e2e`
+(19) all pass.
