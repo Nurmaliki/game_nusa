@@ -108,6 +108,20 @@ export const BALANCE = {
 		exploreXpPerChunk: 3
 	},
 
+	/** Presentation-only "game feel" tunables (no gameplay effect). */
+	feedback: {
+		/** Floating combat/damage numbers drift this far up before fading. */
+		floatRisePx: 34,
+		floatDurationMs: 750,
+		/** Dust/impact particle burst count and lifetime. */
+		hitParticles: 6,
+		particleLifeMs: 380,
+		particleSpeed: 60,
+		/** Idle "bob" applied to living sprites (px amplitude + period). */
+		idleBobPx: 1.5,
+		idleBobPeriodMs: 1400
+	},
+
 	weather: {
 		minDurationMs: 60_000,
 		maxDurationMs: 180_000,

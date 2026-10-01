@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getCreature } from '$data/creatures';
 import type { CreatureRuntime } from '../systems/combat';
 import { creatureTexture, SPRITE_KEYS } from '../core/sprites';
+import { bobPhaseFor, idleBobOffset } from './animation';
 
 /**
  * Renders the live wildlife (see §19 / §34).
@@ -13,6 +14,8 @@ interface RenderedCreature {
 	sprite: Phaser.GameObjects.Sprite;
 	barBg: Phaser.GameObjects.Rectangle;
 	barFill: Phaser.GameObjects.Rectangle;
+	/** Stable phase so each creature bobs out of step with the others. */
+	bobPhase: number;
 }
 
 export class CreatureRenderer {
@@ -24,7 +27,7 @@ export class CreatureRenderer {
 	}
 
 	/** Sync sprites with the given runtime list (create/update/destroy). */
-	sync(creatures: CreatureRuntime[]): void {
+	sync(creatures: CreatureRuntime[], timeMs = 0): void {
 		const live = new Set<CreatureRuntime>(creatures);
 		// Remove sprites whose runtime is gone (O(n) via the live set).
 		for (const [runtime, rendered] of this.map) {
@@ -55,10 +58,12 @@ export class CreatureRenderer {
 					.rectangle(c.position.x - 15, c.position.y - 26, 30, 4, 0x68d391, 1)
 					.setOrigin(0, 0.5)
 					.setDepth(c.position.y + 0.6);
-				rendered = { sprite, barBg, barFill };
+				rendered = { sprite, barBg, barFill, bobPhase: bobPhaseFor(c.definitionId + c.position.x) };
 				this.map.set(c, rendered);
 			}
-			rendered.sprite.setPosition(c.position.x, c.position.y);
+			// A gentle idle bob keeps wildlife from looking frozen.
+			const bob = idleBobOffset(timeMs, rendered.bobPhase);
+			rendered.sprite.setPosition(c.position.x, c.position.y + bob);
 			rendered.sprite.setDepth(c.position.y);
 			const ratio = c.maxHealth > 0 ? c.health / c.maxHealth : 0;
 			rendered.barBg.setPosition(c.position.x, c.position.y - 26);

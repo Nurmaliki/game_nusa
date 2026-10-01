@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getNpc, NPC_LIST } from '$data/npcs';
 import type { NpcRegistry } from '../systems/npcs';
 import { SPRITE_KEYS } from '../core/sprites';
+import { bobPhaseFor, idleBobOffset } from './animation';
 
 /** Distinct cloth colours per NPC so each villager reads differently. */
 const NPC_TINTS: Record<string, number> = {
@@ -18,6 +19,9 @@ const NPC_TINTS: Record<string, number> = {
 export class NpcRenderer {
 	private scene: Phaser.Scene;
 	private sprites = new Map<string, Phaser.GameObjects.Sprite>();
+	/** Base (un-bobbed) world positions, so interaction checks stay stable. */
+	private base = new Map<string, { x: number; y: number }>();
+	private bobPhase = new Map<string, number>();
 
 	constructor(scene: Phaser.Scene) {
 		this.scene = scene;
@@ -31,27 +35,32 @@ export class NpcRenderer {
 			sprite.setOrigin(0.5, 0.85);
 			sprite.setTint(NPC_TINTS[def.id] ?? 0x63b3ed);
 			this.sprites.set(def.id, sprite);
+			this.base.set(def.id, { x: pos.x, y: pos.y });
+			this.bobPhase.set(def.id, bobPhaseFor(def.id));
 		}
 	}
 
 	/** Sync sprite positions with the schedule for the current hour. */
-	sync(registry: NpcRegistry, hour: number): void {
+	sync(registry: NpcRegistry, hour: number, timeMs = 0): void {
 		for (const [id, sprite] of this.sprites) {
 			const pos = registry.positionAt(id, hour);
-			sprite.setPosition(pos.x, pos.y);
+			this.base.set(id, { x: pos.x, y: pos.y });
+			const bob = idleBobOffset(timeMs, this.bobPhase.get(id) ?? 0);
+			sprite.setPosition(pos.x, pos.y + bob);
 			sprite.setDepth(pos.y);
 		}
 	}
 
 	/** World position of an NPC sprite (for interaction distance checks). */
 	positionOf(id: string): { x: number; y: number } | null {
-		const sprite = this.sprites.get(id);
-		return sprite ? { x: sprite.x, y: sprite.y } : null;
+		return this.base.get(id) ?? null;
 	}
 
 	destroy(): void {
 		for (const s of this.sprites.values()) s.destroy();
 		this.sprites.clear();
+		this.base.clear();
+		this.bobPhase.clear();
 	}
 }
 

@@ -15,6 +15,7 @@ import { getCreature } from '$data/creatures';
 import { WildlifeManager } from '../systems/wildlife';
 import { CreatureRenderer } from '../world/creature-renderer';
 import { NpcRenderer } from '../world/npc-renderer';
+import { Feedback } from '../world/feedback';
 import { getNpc } from '$data/npcs';
 import { getItem } from '$data/items';
 import { registerControls, clearControls } from '../input/controls-bridge';
@@ -47,6 +48,7 @@ export class WorldScene extends Phaser.Scene {
 	private wildlife!: WildlifeManager;
 	private creatureRenderer!: CreatureRenderer;
 	private npcRenderer!: NpcRenderer;
+	private feedback!: Feedback;
 	private dialogueOpen = false;
 	private offDialogueClose: (() => void) | null = null;
 	private attackCooldownUntil = 0;
@@ -115,6 +117,7 @@ export class WorldScene extends Phaser.Scene {
 		let rngTick = 0;
 		this.wildlife = new WildlifeManager(() => state.seededRandom(`wildlife_${rngTick++}`));
 		this.creatureRenderer = new CreatureRenderer(this);
+		this.feedback = new Feedback(this);
 
 		// NPCs: place anchors + render, then accept a dialogue-close signal.
 		state.npcs.placeAnchors(this.chunks.pixelWidth, this.chunks.pixelHeight);
@@ -187,6 +190,10 @@ export class WorldScene extends Phaser.Scene {
 		state.player.position = this.player.position;
 		// Y-sort the player among world objects so tall sprites overlap correctly.
 		this.player.sprite.setDepth(this.player.position.y);
+		// A tiny idle "breath" (scale only — never touches the physics body).
+		const moving = (this.player.sprite.body as Phaser.Physics.Arcade.Body).speed > 4;
+		const breath = moving ? 1 : 1 + Math.sin(time / 420) * 0.02;
+		this.player.sprite.setScale(1, breath);
 
 		// Chunk streaming: re-evaluate periodically (cheap, not per-frame).
 		if (time - this.lastChunkCheck > 200) {
@@ -219,7 +226,7 @@ export class WorldScene extends Phaser.Scene {
 		}
 
 		this.updateWildlife(state, time, delta);
-		this.npcRenderer.sync(state.npcs, state.clock.hour);
+		this.npcRenderer.sync(state.npcs, state.clock.hour, time);
 
 		if (time - this.lastTimeEmit > 250) {
 			this.lastTimeEmit = time;
@@ -280,6 +287,13 @@ export class WorldScene extends Phaser.Scene {
 			const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
 			body.setVelocity(kb.x, kb.y);
 			this.shake(120, BALANCE.camera.shakeIntensity * 1.5);
+			this.feedback.floatText(
+				this.player.position.x,
+				this.player.position.y - 24,
+				`-${atk.damage}`,
+				'#ff6b6b'
+			);
+			this.feedback.burst(this.player.position.x, this.player.position.y - 10, 0xff6b6b, 5);
 			getGameBus().emit('PLAYER_DAMAGED', {
 				amount: atk.damage,
 				health: state.stats.health
@@ -299,7 +313,7 @@ export class WorldScene extends Phaser.Scene {
 			this.controls.consume('ATTACK');
 		}
 
-		this.creatureRenderer.sync(this.wildlife.all());
+		this.creatureRenderer.sync(this.wildlife.all(), time);
 	}
 
 	private playerAttack(
@@ -319,6 +333,12 @@ export class WorldScene extends Phaser.Scene {
 			const killed = this.wildlife.damageNearest(target.position, 60, r.value.result.damage);
 			state.recordCombatHit();
 			this.shake(80, BALANCE.camera.shakeIntensity);
+			this.feedback.impact(
+				target.position.x,
+				target.position.y - 18,
+				r.value.result.damage,
+				r.value.result.isCritical
+			);
 			getGameBus().emit('COMBAT_HIT', {
 				damage: r.value.result.damage,
 				isCritical: r.value.result.isCritical
@@ -526,6 +546,7 @@ export class WorldScene extends Phaser.Scene {
 
 		this.shake(60, BALANCE.camera.shakeIntensity * 0.6);
 		getGameBus().emit('SFX', { id: 'harvest' });
+		this.feedback.burst(node.worldX, node.worldY - 8, 0xd8c48a, 5);
 
 		if (!state.nodeHasWork(node.instanceId)) {
 			state.markNodeHarvested(node.instanceId);
@@ -533,7 +554,10 @@ export class WorldScene extends Phaser.Scene {
 			this.lastInteractTarget = null;
 			getGameBus().emit('INTERACTION_PROMPT', { text: null });
 			const toasts = result.value.map((s) => `${getItem(s.id)?.name ?? s.id} x${s.qty}`).join(', ');
-			if (toasts) getGameBus().emit('TOAST', { text: `+${toasts}`, kind: 'success' });
+			if (toasts) {
+				getGameBus().emit('TOAST', { text: `+${toasts}`, kind: 'success' });
+				this.feedback.floatText(node.worldX, node.worldY - 20, `+${toasts}`, '#a8e6a1');
+			}
 		} else {
 			node.sprite.setAlpha(0.7 + 0.3 * Math.random());
 		}

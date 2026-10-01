@@ -318,6 +318,112 @@ function rarePlant(g: Phaser.GameObjects.Graphics): void {
 
 // ── Rocks & ore ────────────────────────────────────────────────────────
 
+/** A low mound of clay: rounded, earthy, with a dug-out top. */
+function clayMound(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 30, 17, 7, 0x000000, 0.14);
+	ellipse(g, 22, 24, 16, 10, 0x9a5b3b);
+	ellipse(g, 22, 21, 15, 9, 0xb5734b);
+	// Pit / dug top showing fresh clay.
+	ellipse(g, 22, 19, 7, 4, 0x7d4229);
+	ellipse(g, 22, 18, 5, 3, 0x93502f);
+	// Texture clods.
+	ball(g, 12, 26, 2, 0x8a4c30);
+	ball(g, 31, 25, 2, 0x8a4c30);
+	ball(g, 27, 14, 2, 0xc98a5c);
+	rect(g, 8, 29, 4, 2, 0x7d4229);
+}
+
+/** A flat salt pan: near-white cracked crust with faint brine pools. */
+function saltFlat(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 28, 18, 7, 0x000000, 0.1);
+	ellipse(g, 22, 22, 18, 12, 0xe6ebef);
+	ellipse(g, 22, 20, 16, 10, 0xf4f7f9);
+	// Crack lines across the crust.
+	g.lineStyle(1, 0xc2ccd4, 1);
+	g.lineBetween(6, 22, 16, 18);
+	g.lineBetween(16, 18, 22, 24);
+	g.lineBetween(22, 24, 34, 20);
+	g.lineBetween(12, 14, 20, 22);
+	g.lineBetween(30, 14, 24, 22);
+	// Brine pools.
+	ellipse(g, 14, 26, 3, 2, 0xbcd0dc);
+	ellipse(g, 29, 26, 3, 2, 0xbcd0dc);
+}
+
+/** A bank of pale sand: a low dune with ripples. */
+function sandBank(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 30, 18, 6, 0x000000, 0.12);
+	poly(
+		g,
+		[
+			[6, 30],
+			[12, 16],
+			[22, 12],
+			[33, 17],
+			[38, 30]
+		],
+		0xd8c48a
+	);
+	poly(
+		g,
+		[
+			[12, 16],
+			[22, 12],
+			[30, 17],
+			[22, 22]
+		],
+		0xeadcae
+	);
+	// Wind ripples.
+	g.lineStyle(1, 0xb8a06a, 1);
+	g.lineBetween(10, 26, 34, 24);
+	g.lineBetween(12, 22, 32, 21);
+	rect(g, 14, 28, 18, 1, 0xc7b178);
+}
+
+/** A mossy ruin cache: broken stone block with a recessed chest niche. */
+function ruinCache(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 33, 16, 5, 0x000000, 0.16);
+	// Broken plinth blocks.
+	rect(g, 8, 20, 28, 12, 0x8a93a6);
+	rect(g, 8, 20, 28, 3, 0xa3abbc);
+	rect(g, 8, 29, 28, 3, 0x6b7385);
+	g.lineStyle(1, 0x5a6375, 1);
+	g.strokeRect(14, 23, 16, 8);
+	// Crumbled corner gap.
+	rect(g, 30, 20, 6, 6, 0x6b7385);
+	// Recessed niche with a small chest.
+	rect(g, 15, 24, 14, 7, 0x3a2f22);
+	rect(g, 16, 25, 12, 5, 0x8a5a2b);
+	rect(g, 16, 27, 12, 1, 0x5f3d1c);
+	rect(g, 21, 26, 2, 3, 0xf1c40f);
+	// Moss patches.
+	ball(g, 10, 20, 3, 0x4a7d3a);
+	ball(g, 33, 22, 2, 0x4a7d3a);
+}
+
+/** A bed of oysters: clustered grey shells among wet sand. */
+function oysterBed(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 22, 30, 16, 6, 0x000000, 0.12);
+	ellipse(g, 22, 24, 16, 10, 0xb8a06a);
+	ellipse(g, 22, 23, 14, 8, 0xcdb88a);
+	const shells: [number, number, number][] = [
+		[14, 24, 6],
+		[27, 22, 7],
+		[20, 28, 6],
+		[30, 28, 5]
+	];
+	for (const [x, y, r] of shells) {
+		ellipse(g, x, y, r, r * 0.72, 0x9aa2ae);
+		ellipse(g, x, y - 1, r - 2, r * 0.5, 0xc3cad3);
+		g.lineStyle(1, 0x7d848f, 1);
+		g.lineBetween(x - r + 2, y, x + r - 2, y);
+	}
+	// A pearly highlight.
+	ball(g, 16, 22, 1, 0xf2f4f7);
+	ball(g, 28, 20, 1, 0xf2f4f7);
+}
+
 function boulder(g: Phaser.GameObjects.Graphics, tone: number): void {
 	poly(
 		g,
@@ -714,6 +820,11 @@ export const SPRITE_KEYS = {
 	mushroom: 'sprite_mushroom',
 	rarePlant: 'sprite_rare_plant',
 	shellPile: 'sprite_shell_pile',
+	clayMound: 'sprite_clay_mound',
+	saltFlat: 'sprite_salt_flat',
+	sandBank: 'sprite_sand_bank',
+	ruinCache: 'sprite_ruin_cache',
+	oysterBed: 'sprite_oyster_bed',
 	fish: 'sprite_fish',
 	crab: 'sprite_crab',
 	seagull: 'sprite_seagull',
@@ -744,7 +855,7 @@ export function resourceTexture(nodeTypeId: string): string {
 		case 'rock':
 			return SPRITE_KEYS.rock;
 		case 'clay_mound':
-			return SPRITE_KEYS.rock;
+			return SPRITE_KEYS.clayMound;
 		case 'iron_vein':
 			return SPRITE_KEYS.ironVein;
 		case 'gold_vein':
@@ -760,13 +871,13 @@ export function resourceTexture(nodeTypeId: string): string {
 		case 'shell_pile':
 			return SPRITE_KEYS.shellPile;
 		case 'oyster_bed':
-			return SPRITE_KEYS.shellPile;
+			return SPRITE_KEYS.oysterBed;
 		case 'salt_flat':
-			return SPRITE_KEYS.rock;
+			return SPRITE_KEYS.saltFlat;
 		case 'sand_bank':
-			return SPRITE_KEYS.rock;
+			return SPRITE_KEYS.sandBank;
 		case 'ruin_cache':
-			return SPRITE_KEYS.rock;
+			return SPRITE_KEYS.ruinCache;
 		case 'fish_shoal':
 			return SPRITE_KEYS.fish;
 		default:
@@ -829,6 +940,12 @@ export function ensureSprites(scene: Phaser.Scene): void {
 	P(SPRITE_KEYS.ironVein, 44, 40, (g) => oreRock(g, 0xb0b6c2));
 	P(SPRITE_KEYS.goldVein, 44, 40, (g) => oreRock(g, 0xf1c40f));
 	P(SPRITE_KEYS.shellPile, 36, 34, (g) => shellPile(g));
+	// Distinct coastal / terrain props (previously shared the boulder art).
+	P(SPRITE_KEYS.clayMound, 44, 36, (g) => clayMound(g));
+	P(SPRITE_KEYS.saltFlat, 44, 34, (g) => saltFlat(g));
+	P(SPRITE_KEYS.sandBank, 44, 34, (g) => sandBank(g));
+	P(SPRITE_KEYS.ruinCache, 44, 38, (g) => ruinCache(g));
+	P(SPRITE_KEYS.oysterBed, 44, 34, (g) => oysterBed(g));
 	P(SPRITE_KEYS.fish, 44, 44, (g) => fish(g));
 
 	// Creatures.
