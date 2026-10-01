@@ -518,3 +518,19 @@ data-driven content, zero external assets. Gate kept green at every step.
 
 Gate after this pass: `check`, `lint`, `test:unit` (408), `build`, `test:e2e`
 (21) all pass.
+
+### Sprite regression guard
+
+Sprites are drawn programmatically (no external assets), so a stray edit to a
+painter (a colour typo, a dropped draw call, a painter that silently falls back
+to a blank texture) was invisible until someone played the game. A new
+`sprites.snapshot.spec.ts` records the draw-op stream each painter emits (via a
+minimal Phaser stub + a fake `Graphics`) and snapshots a compact per-sprite
+fingerprint (op counts by kind, bounding box, and an order-sensitive digest).
+The exact pixels are not asserted (brittle); the _shape_ of the drawing is, so
+a genuinely changed sprite fails loudly. Verified the guard trips on an injected
+one-off draw call.
+
+Gate after the coverage + snapshot work: `lint`, `check`, `test:coverage`
+(430 unit; 87.6% stmts / 92.1% lines / 75.8% branches), `build`, `test:e2e` (21)
+all pass.
