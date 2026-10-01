@@ -3,6 +3,7 @@ import { getNpc, NPC_LIST } from '$data/npcs';
 import type { NpcRegistry } from '../systems/npcs';
 import { SPRITE_KEYS } from '../core/sprites';
 import { bobPhaseFor, idleBobOffset } from './animation';
+import { settingsStore } from '$stores/settings.svelte';
 
 /** Distinct cloth colours per NPC so each villager reads differently. */
 const NPC_TINTS: Record<string, number> = {
@@ -45,7 +46,9 @@ export class NpcRenderer {
 		for (const [id, sprite] of this.sprites) {
 			const pos = registry.positionAt(id, hour);
 			this.base.set(id, { x: pos.x, y: pos.y });
-			const bob = idleBobOffset(timeMs, this.bobPhase.get(id) ?? 0);
+			const bob = settingsStore.reducedMotion
+				? 0
+				: idleBobOffset(timeMs, this.bobPhase.get(id) ?? 0);
 			sprite.setPosition(pos.x, pos.y + bob);
 			sprite.setDepth(pos.y);
 		}

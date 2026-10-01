@@ -3,6 +3,7 @@ import { getCreature } from '$data/creatures';
 import type { CreatureRuntime } from '../systems/combat';
 import { creatureTexture, SPRITE_KEYS } from '../core/sprites';
 import { bobPhaseFor, idleBobOffset } from './animation';
+import { settingsStore } from '$stores/settings.svelte';
 
 /**
  * Renders the live wildlife (see §19 / §34).
@@ -61,8 +62,9 @@ export class CreatureRenderer {
 				rendered = { sprite, barBg, barFill, bobPhase: bobPhaseFor(c.definitionId + c.position.x) };
 				this.map.set(c, rendered);
 			}
-			// A gentle idle bob keeps wildlife from looking frozen.
-			const bob = idleBobOffset(timeMs, rendered.bobPhase);
+			// A gentle idle bob keeps wildlife from looking frozen. Suppressed when
+			// the player prefers reduced motion.
+			const bob = settingsStore.reducedMotion ? 0 : idleBobOffset(timeMs, rendered.bobPhase);
 			rendered.sprite.setPosition(c.position.x, c.position.y + bob);
 			rendered.sprite.setDepth(c.position.y);
 			const ratio = c.maxHealth > 0 ? c.health / c.maxHealth : 0;

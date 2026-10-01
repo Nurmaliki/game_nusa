@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BALANCE } from '../config/balance';
+import { settingsStore } from '$stores/settings.svelte';
 
 /**
  * Presentation-only "game feel" effects (see §35 / §38).
@@ -8,12 +9,20 @@ import { BALANCE } from '../config/balance';
  * feel responsive. Everything here is cosmetic: no gameplay state is read or
  * written, and all objects clean themselves up. Kept out of the pure game core
  * so the domain logic stays engine-free.
+ *
+ * ACCESSIBILITY: when the player enables "reduced motion", particle bursts are
+ * suppressed entirely and floating numbers fade in place instead of rising, so
+ * feedback stays informative without the movement.
  */
 export class Feedback {
 	private scene: Phaser.Scene;
 
 	constructor(scene: Phaser.Scene) {
 		this.scene = scene;
+	}
+
+	private get reduced(): boolean {
+		return settingsStore.reducedMotion;
 	}
 
 	/** Floating number that rises and fades (damage, healing, loot counts). */
@@ -31,9 +40,12 @@ export class Feedback {
 
 		this.scene.tweens.add({
 			targets: label,
-			y: y - BALANCE.feedback.floatRisePx,
+			// Reduced motion: hold position and just fade.
+			y: this.reduced ? y : y - BALANCE.feedback.floatRisePx,
 			alpha: { from: 1, to: 0 },
-			duration: BALANCE.feedback.floatDurationMs,
+			duration: this.reduced
+				? BALANCE.feedback.floatDurationMs * 0.7
+				: BALANCE.feedback.floatDurationMs,
 			ease: 'Cubic.easeOut',
 			onComplete: () => label.destroy()
 		});
@@ -46,6 +58,7 @@ export class Feedback {
 		color: number = 0xd8c48a,
 		count: number = BALANCE.feedback.hitParticles
 	): void {
+		if (this.reduced) return; // no motion-heavy particles under reduced motion
 		for (let i = 0; i < count; i++) {
 			const angle = (Math.PI * 2 * i) / count + Math.random() * 0.6;
 			const dot = this.scene.add.rectangle(x, y, 3, 3, color, 1).setDepth(y + 100000);

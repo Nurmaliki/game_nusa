@@ -192,8 +192,9 @@ export class WorldScene extends Phaser.Scene {
 		// Y-sort the player among world objects so tall sprites overlap correctly.
 		this.player.sprite.setDepth(this.player.position.y);
 		// A tiny idle "breath" (scale only — never touches the physics body).
+		// Skipped under reduced motion.
 		const moving = (this.player.sprite.body as Phaser.Physics.Arcade.Body).speed > 4;
-		const breath = moving ? 1 : 1 + Math.sin(time / 420) * 0.02;
+		const breath = moving || settingsStore.reducedMotion ? 1 : 1 + Math.sin(time / 420) * 0.02;
 		this.player.sprite.setScale(1, breath);
 
 		// Chunk streaming: re-evaluate periodically (cheap, not per-frame).

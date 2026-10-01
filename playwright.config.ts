@@ -12,7 +12,13 @@ import { defineConfig, devices } from '@playwright/test';
  *    rendering is CPU-bound), so it runs alone with a single worker.
  */
 export default defineConfig({
-	webServer: { command: 'npm run build && npm run preview', port: 4173 },
+	// The webServer builds the app from scratch then previews it; on a cold CI
+	// runner a production build can exceed the 60s default, so allow more time.
+	webServer: {
+		command: 'npm run build && npm run preview',
+		port: 4173,
+		timeout: 180_000
+	},
 	testMatch: '**/*.e2e.{ts,js}',
 	workers: 2,
 	projects: [
