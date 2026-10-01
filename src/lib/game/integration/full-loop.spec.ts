@@ -187,6 +187,33 @@ describe('integration: full gameplay loop', () => {
 		expect(reloaded.toSave().inventory.slots).toEqual(state.toSave().inventory.slots);
 	});
 
+	it('unlocks achievements and persists them across a save round trip', () => {
+		const state = newGame(555);
+		// Nothing unlocked at the start.
+		expect(state.achievements.count).toBe(0);
+		// Gather enough to cross the first threshold, then evaluate.
+		for (let i = 0; i < 10; i++) harvestUntil(state, 'tree', `t${i}`);
+		const fresh = state.evaluateAchievements();
+		expect(fresh).toContain('first_steps');
+		// Evaluating again is a no-op for already-unlocked ids.
+		expect(state.evaluateAchievements()).not.toContain('first_steps');
+
+		// The unlocked set survives a full serialise -> parse -> restore.
+		const save = state.toSave();
+		expect(save.achievements).toContain('first_steps');
+		const reloaded = GameState.fromSave(JSON.parse(JSON.stringify(save)));
+		expect(reloaded.achievements.has('first_steps')).toBe(true);
+	});
+
+	it('loads an older save with no achievements field without crashing', () => {
+		const state = newGame(556);
+		const save = state.toSave();
+		delete (save as { achievements?: string[] }).achievements;
+		const reloaded = GameState.fromSave(JSON.parse(JSON.stringify(save)));
+		expect(reloaded.achievements.count).toBe(0);
+		expect(reloaded.evaluateAchievements()).toBeInstanceOf(Array);
+	});
+
 	it('is deterministic: the same seed yields the same random stream', () => {
 		const a = newGame(999);
 		const b = newGame(999);

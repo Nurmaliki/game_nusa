@@ -34,7 +34,10 @@ import {
 	type QuestProgress
 } from '../systems/quests';
 import { NpcRegistry } from '../systems/npcs';
+import { Achievements, type ProgressSnapshot } from '../systems/achievements';
+import { BIOME_LIST } from '$data/biomes';
 import type { QuestDefinition } from '$data/quests';
+import { QUEST_LIST } from '$data/quests';
 import {
 	reachableStations,
 	nearestRespawnAnchor,
@@ -78,6 +81,7 @@ export class GameState {
 	skills: Skills;
 	quests: QuestLog;
 	npcs: NpcRegistry;
+	achievements = new Achievements();
 
 	player: PlayerSave;
 	buildings: BuildingInstance[] = [];
@@ -434,6 +438,36 @@ export class GameState {
 		this.quests.update(this.questSnapshot());
 	}
 
+	/** Snapshot of lifetime progress used by the achievement engine. */
+	progressSnapshot(): ProgressSnapshot {
+		const skills: Record<string, number> = {};
+		for (const s of this.skills.serialize()) skills[s.id] = s.level;
+
+		// Chapters completed = how many `final` quests have been turned in.
+		let chapters = 0;
+		for (const q of QUEST_LIST) {
+			if (q.final && this.quests.isCompleted(q.id)) chapters += 1;
+		}
+
+		return {
+			stats: { ...this.statistics },
+			skills,
+			biomesVisited: this.visitedBiomes.size,
+			totalBiomes: BIOME_LIST.length,
+			questsCompleted: this.statistics.questsCompleted,
+			chaptersCompleted: chapters
+		};
+	}
+
+	/**
+	 * Evaluate achievements against current progress. Returns the ids newly
+	 * unlocked by this call (already-unlocked ones are omitted), so the caller
+	 * can surface each exactly once.
+	 */
+	evaluateAchievements(): string[] {
+		return this.achievements.evaluate(this.progressSnapshot());
+	}
+
 	acceptQuest(id: string): Result<void, string> {
 		const r = this.quests.accept(id);
 		if (!r.ok) return err(r.error);
@@ -647,7 +681,8 @@ export class GameState {
 			},
 			gameTimeMs: this.clock.totalMs,
 			weather: this.weather,
-			chapterComplete: this.chapterComplete
+			chapterComplete: this.chapterComplete,
+			achievements: this.achievements.serialize()
 		};
 	}
 
@@ -708,6 +743,7 @@ export class GameState {
 		};
 		state.weather = save.weather;
 		state.chapterComplete = save.chapterComplete;
+		state.achievements = new Achievements(save.achievements ?? []);
 		return state;
 	}
 

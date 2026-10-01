@@ -20,6 +20,7 @@ import { Feedback } from '../world/feedback';
 import { WeatherSystem, getWeather } from '../systems/weather';
 import { getNpc } from '$data/npcs';
 import { getItem } from '$data/items';
+import { getAchievement } from '$data/achievements';
 import { registerControls, clearControls } from '../input/controls-bridge';
 import { settingsStore } from '$stores/settings.svelte';
 import type { BiomeId } from '$types/core';
@@ -264,6 +265,7 @@ export class WorldScene extends Phaser.Scene {
 		if (time - this.lastStatsEmit > 500) {
 			this.lastStatsEmit = time;
 			session.emitStats();
+			this.flushAchievements(state);
 		}
 
 		this.flushSkillEvents(state);
@@ -285,6 +287,25 @@ export class WorldScene extends Phaser.Scene {
 			const label = SKILL_LABELS[g.id] ?? g.id;
 			getGameBus().emit('TOAST', { text: `${label} naik ke level ${g.level}`, kind: 'success' });
 		}
+	}
+
+	/**
+	 * Evaluate achievements against current progress and, for any newly unlocked,
+	 * fire the SFX, a toast, and a single ACHIEVEMENTS_UNLOCKED event (so the
+	 * achievements panel can refresh). Cheap: the engine early-outs per id.
+	 */
+	private flushAchievements(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {
+		const fresh = state.evaluateAchievements();
+		if (fresh.length === 0) return;
+		for (const id of fresh) {
+			const def = getAchievement(id);
+			getGameBus().emit('TOAST', {
+				text: `Pencapaian: ${def?.name ?? id}`,
+				kind: 'success'
+			});
+		}
+		getGameBus().emit('SFX', { id: 'achievement' });
+		getGameBus().emit('ACHIEVEMENTS_UNLOCKED', { ids: fresh });
 	}
 
 	/**

@@ -99,6 +99,8 @@ export interface GameEventMap {
 	SKILLS_CHANGED: { skills: { id: string; level: number; xp: number }[] };
 	/** A skill reached a new level (id + new level) — drives SFX + UI toast. */
 	SKILL_LEVEL_UP: { id: string; level: number };
+	/** Achievements newly unlocked (ids) — drives toast + SFX + panel refresh. */
+	ACHIEVEMENTS_UNLOCKED: { ids: string[] };
 	TOAST: { text: string; kind: 'info' | 'success' | 'warning' };
 	/** Direct audio cue request (systems -> audio manager). */
 	SFX: { id: string };

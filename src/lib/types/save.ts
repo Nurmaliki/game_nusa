@@ -133,6 +133,8 @@ export interface GameSave {
 	gameTimeMs: number;
 	weather: WeatherId;
 	chapterComplete: boolean;
+	/** Ids of unlocked achievements (added post-v2; optional for old saves). */
+	achievements?: string[];
 }
 
 export interface SaveSlotMeta {

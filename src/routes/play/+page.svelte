@@ -16,6 +16,7 @@
 	import BuildingPanel from '$lib/components/building/BuildingPanel.svelte';
 	import QuestLogPanel from '$lib/components/quests/QuestLogPanel.svelte';
 	import SkillsPanel from '$lib/components/hud/SkillsPanel.svelte';
+	import AchievementsPanel from '$lib/components/hud/AchievementsPanel.svelte';
 	import { getGameBus } from '$game/core/event-bus';
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { getItem } from '$data/items';
@@ -31,6 +32,7 @@
 	let buildingOpen = $state(false);
 	let questsOpen = $state(false);
 	let skillsOpen = $state(false);
+	let achievementsOpen = $state(false);
 	let toast = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
 	let muted = $state(false);
@@ -42,7 +44,7 @@
 	);
 	// Any open panel suspends on-screen movement so the player doesn't drift.
 	const anyPanelOpen = $derived(
-		inventoryOpen || craftingOpen || buildingOpen || questsOpen || skillsOpen
+		inventoryOpen || craftingOpen || buildingOpen || questsOpen || skillsOpen || achievementsOpen
 	);
 
 	onMount(() => {
@@ -142,6 +144,8 @@
 				count: (itemId: string) => session.state?.inventory.count(itemId) ?? 0,
 				save: () => session.saveNow(),
 				buildings: () => session.state?.buildings.length ?? 0,
+				achievements: () => session.state?.achievements.serialize() ?? [],
+				evaluateAchievements: () => session.state?.evaluateAchievements() ?? [],
 				stats: () => {
 					const s = session.state?.stats;
 					return s
@@ -193,12 +197,17 @@
 			skillsOpen = !skillsOpen;
 			playUiClick();
 			e.preventDefault();
+		} else if (e.key === 'p' || e.key === 'P') {
+			achievementsOpen = !achievementsOpen;
+			playUiClick();
+			e.preventDefault();
 		} else if (e.key === 'Escape') {
 			inventoryOpen = false;
 			craftingOpen = false;
 			buildingOpen = false;
 			questsOpen = false;
 			skillsOpen = false;
+			achievementsOpen = false;
 			e.preventDefault();
 		}
 	}
@@ -304,6 +313,16 @@
 		>
 			K · Keterampilan
 		</button>
+		<button
+			class:active={achievementsOpen}
+			onclick={() => {
+				achievementsOpen = !achievementsOpen;
+				playUiClick();
+			}}
+			aria-keyshortcuts="p"
+		>
+			P · Pencapaian
+		</button>
 	</div>
 
 	{#if toast}
@@ -315,6 +334,7 @@
 	<BuildingPanel bind:open={buildingOpen} />
 	<QuestLogPanel bind:open={questsOpen} />
 	<SkillsPanel bind:open={skillsOpen} />
+	<AchievementsPanel bind:open={achievementsOpen} />
 
 	{#if errorMsg}
 		<div class="error-overlay">

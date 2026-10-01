@@ -219,6 +219,15 @@ export const SFX: Record<string, SfxDefinition> = {
 		attack: 0.008,
 		duration: 0.26,
 		gain: 0.22
+	},
+	achievement: {
+		id: 'achievement',
+		wave: 'triangle',
+		startHz: 660,
+		endHz: 1320,
+		attack: 0.005,
+		duration: 0.55,
+		gain: 0.28
 	}
 };
 
