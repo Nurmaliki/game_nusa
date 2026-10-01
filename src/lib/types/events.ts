@@ -101,6 +101,8 @@ export interface GameEventMap {
 	SKILL_LEVEL_UP: { id: string; level: number };
 	/** Achievements newly unlocked (ids) — drives toast + SFX + panel refresh. */
 	ACHIEVEMENTS_UNLOCKED: { ids: string[] };
+	/** A signal that may advance the first-session tutorial checklist. */
+	TUTORIAL_SIGNAL: { signal: 'move' | 'gather' | 'craft' | 'build' | 'talk' };
 	TOAST: { text: string; kind: 'info' | 'success' | 'warning' };
 	/** Direct audio cue request (systems -> audio manager). */
 	SFX: { id: string };

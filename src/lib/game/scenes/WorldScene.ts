@@ -52,6 +52,7 @@ export class WorldScene extends Phaser.Scene {
 	private creatureRenderer!: CreatureRenderer;
 	private npcRenderer!: NpcRenderer;
 	private feedback!: Feedback;
+	private emittedMoveSignal = false;
 	private weather!: WeatherSystem;
 	private weatherOverlay!: Phaser.GameObjects.Rectangle;
 	private rainEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -216,6 +217,12 @@ export class WorldScene extends Phaser.Scene {
 		const moving = (this.player.sprite.body as Phaser.Physics.Arcade.Body).speed > 4;
 		const breath = moving || settingsStore.reducedMotion ? 1 : 1 + Math.sin(time / 420) * 0.02;
 		this.player.sprite.setScale(1, breath);
+
+		// First-session tutorial: the move step completes on the first step taken.
+		if (moving && !this.emittedMoveSignal) {
+			this.emittedMoveSignal = true;
+			getGameBus().emit('TUTORIAL_SIGNAL', { signal: 'move' });
+		}
 
 		// Chunk streaming: re-evaluate periodically (cheap, not per-frame).
 		if (time - this.lastChunkCheck > 200) {
@@ -563,6 +570,7 @@ export class WorldScene extends Phaser.Scene {
 				if (defId) this.renderBuilding(id, defId, { x: world.x, y: world.y });
 				getGameBus().emit('TOAST', { text: 'Bangunan dibangun', kind: 'success' });
 				getGameSession().notifyInventory();
+				getGameBus().emit('TUTORIAL_SIGNAL', { signal: 'build' });
 				this.build.cancel();
 				getGameBus().emit('BUILD_MODE_CHANGED', { definitionId: null });
 			}
@@ -681,6 +689,9 @@ export class WorldScene extends Phaser.Scene {
 	): void {
 		const result = state.harvest(node.typeId, node.instanceId);
 		if (!result.ok) return;
+
+		// Tutorial: any successful swing counts as gathering.
+		getGameBus().emit('TUTORIAL_SIGNAL', { signal: 'gather' });
 
 		const def = getResourceNode(node.typeId);
 		const isFishing = (def?.skill ?? 'gathering') === 'fishing';

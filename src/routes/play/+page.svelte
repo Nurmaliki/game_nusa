@@ -17,6 +17,7 @@
 	import QuestLogPanel from '$lib/components/quests/QuestLogPanel.svelte';
 	import SkillsPanel from '$lib/components/hud/SkillsPanel.svelte';
 	import AchievementsPanel from '$lib/components/hud/AchievementsPanel.svelte';
+	import TutorialOverlay from '$lib/components/hud/TutorialOverlay.svelte';
 	import { getGameBus } from '$game/core/event-bus';
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { getItem } from '$data/items';
@@ -249,6 +250,7 @@
 	<QuestTracker />
 	<DialoguePanel />
 	<ChapterCompleteOverlay />
+	<TutorialOverlay />
 	{#if showTouch}
 		<MobileControls disabled={anyPanelOpen} />
 	{/if}

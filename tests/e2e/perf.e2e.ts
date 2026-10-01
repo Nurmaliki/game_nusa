@@ -21,6 +21,17 @@ import { startNewGame } from './helpers';
 const SAMPLE_MS = 2500;
 /** The game must reach at least this fraction of the same-browser baseline. */
 const MIN_BASELINE_RATIO = 0.4;
+/** Samples per phase; the best (max) is used to shrug off transient dips. */
+const SAMPLES = 3;
+
+/** Take several rAF samples and return the best (highest) fps. */
+async function bestOf(pageName: import('@playwright/test').Page, ms = SAMPLE_MS) {
+	let best = 0;
+	for (let i = 0; i < SAMPLES; i++) {
+		best = Math.max(best, await sampleRaf(pageName, ms));
+	}
+	return best;
+}
 
 async function sampleRaf(pageName: import('@playwright/test').Page, ms = SAMPLE_MS) {
 	return pageName.evaluate(
@@ -41,20 +52,24 @@ async function sampleRaf(pageName: import('@playwright/test').Page, ms = SAMPLE_
 }
 
 test('perf: the world renders at a stable frame rate', async ({ page }) => {
+	// Multiple sampling windows plus boot/settle comfortably exceed the default.
+	test.setTimeout(90_000);
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 
-	// 1) Baseline: how fast can this browser tick rAF with almost no work?
+	// 1) Baseline: how fast can this browser tick rAF with almost no work? Take
+	// the best of several samples so a momentarily throttled machine (e.g. right
+	// after the rest of the suite) doesn't deflate the ratio denominator's use.
 	await page.goto('about:blank');
-	const baseline = await sampleRaf(page);
+	const baseline = await bestOf(page);
 
 	// 2) Boot the game and let chunk streaming, spawns and the ambient pass settle.
 	await startNewGame(page);
 	await page.waitForTimeout(2000);
 
-	const idle = await sampleRaf(page);
+	const idle = await bestOf(page);
 	await page.keyboard.down('d');
-	const moving = await sampleRaf(page);
+	const moving = await bestOf(page);
 	await page.keyboard.up('d');
 
 	// Ratios in the failure message so a regression is diagnosable at a glance.

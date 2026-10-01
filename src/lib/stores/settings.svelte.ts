@@ -14,6 +14,8 @@ export interface Settings {
 	damageFlash: boolean;
 	/** Force on-screen touch controls on/off; null = auto-detect. */
 	touchControls: boolean | null;
+	/** Whether the first-session tutorial has been finished or dismissed. */
+	tutorialSeen: boolean;
 }
 
 const STORAGE_KEY = 'nusantara.settings.v1';
@@ -26,7 +28,8 @@ const defaults: Settings = {
 	reducedMotion: false,
 	screenShake: true,
 	damageFlash: true,
-	touchControls: null
+	touchControls: null,
+	tutorialSeen: false
 };
 
 function load(): Settings {
@@ -50,6 +53,7 @@ class SettingsStore {
 	screenShake = $state(defaults.screenShake);
 	damageFlash = $state(defaults.damageFlash);
 	touchControls = $state<boolean | null>(defaults.touchControls);
+	tutorialSeen = $state(defaults.tutorialSeen);
 
 	private persistDebounced = 0;
 
@@ -64,6 +68,7 @@ class SettingsStore {
 		this.screenShake = s.screenShake;
 		this.damageFlash = s.damageFlash;
 		this.touchControls = s.touchControls;
+		this.tutorialSeen = s.tutorialSeen;
 
 		// Auto-persist on any change.
 		$effect.root(() => {
@@ -77,6 +82,7 @@ class SettingsStore {
 				void this.screenShake;
 				void this.damageFlash;
 				void this.touchControls;
+				void this.tutorialSeen;
 				this.schedulePersist();
 			});
 		});
@@ -106,7 +112,8 @@ class SettingsStore {
 			reducedMotion: this.reducedMotion,
 			screenShake: this.screenShake,
 			damageFlash: this.damageFlash,
-			touchControls: this.touchControls
+			touchControls: this.touchControls,
+			tutorialSeen: this.tutorialSeen
 		};
 	}
 

@@ -65,6 +65,7 @@
 			session.emitStats();
 			getGameBus().emit('SFX', { id: 'craft' });
 			getGameBus().emit('TOAST', { text: `Membuat ${recipe.name}`, kind: 'success' });
+			getGameBus().emit('TUTORIAL_SIGNAL', { signal: 'craft' });
 		} else {
 			getGameBus().emit('TOAST', { text: `Gagal: ${recipe.name}`, kind: 'warning' });
 		}
