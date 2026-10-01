@@ -1,19 +1,13 @@
 <script lang="ts">
 	import { getGameSession } from '$stores/game-session.svelte';
-	import { SKILL_IDS, type SkillId } from '$game/systems/skills';
+	import { SKILL_IDS, SKILL_LABELS } from '$game/systems/skills';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
 	let revision = $state(0);
 	const session = getGameSession();
 
-	const LABELS: Record<SkillId, string> = {
-		gathering: 'Mengumpulkan',
-		crafting: 'Kerajinan',
-		survival: 'Bertahan Hidup',
-		combat: 'Pertarungan',
-		fishing: 'Memancing'
-	};
+	const LABELS = SKILL_LABELS;
 
 	$effect(() => {
 		// Re-read on any inventory/stat change (skills change alongside them).

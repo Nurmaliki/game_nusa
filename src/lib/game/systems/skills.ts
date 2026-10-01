@@ -13,6 +13,15 @@ export type SkillId = 'gathering' | 'crafting' | 'survival' | 'combat' | 'fishin
 
 export const SKILL_IDS: SkillId[] = ['gathering', 'crafting', 'survival', 'combat', 'fishing'];
 
+/** Human-readable Indonesian names for each skill (single source of truth). */
+export const SKILL_LABELS: Record<SkillId, string> = {
+	gathering: 'Mengumpulkan',
+	crafting: 'Kerajinan',
+	survival: 'Bertahan Hidup',
+	combat: 'Pertarungan',
+	fishing: 'Memancing'
+};
+
 /** XP required to reach `level` (1-based). level 1 = 0 xp. */
 export function xpForLevel(level: number): number {
 	if (level <= 1) return 0;
@@ -33,6 +42,8 @@ export interface SkillState {
 
 export class Skills {
 	private readonly map = new Map<SkillId, number>();
+	/** Level-ups recorded by `award()` and drained by the presentation layer. */
+	private pendingLevelUps: { id: SkillId; level: number }[] = [];
 
 	constructor() {
 		for (const id of SKILL_IDS) this.map.set(id, 0);
@@ -55,12 +66,29 @@ export class Skills {
 		return (this.xp(id) - from) / (to - from);
 	}
 
-	/** Award xp; returns the levels gained (0 or 1 typical). */
+	/** Award xp; returns the levels gained (0 or 1 typical). Records level-ups. */
 	award(id: SkillId, amount: number): number {
 		if (amount <= 0) return 0;
 		const before = this.level(id);
 		this.map.set(id, Math.min(this.xp(id) + amount, xpForLevel(BALANCE.xp.maxLevel)));
-		return this.level(id) - before;
+		const gained = this.level(id) - before;
+		if (gained > 0) this.pendingLevelUps.push({ id, level: this.level(id) });
+		return gained;
+	}
+
+	/**
+	 * Return (and clear) any level-ups since the last call. Pure bookkeeping —
+	 * the scene uses this to fire a level-up sound/toast exactly once per gain.
+	 */
+	drainLevelUps(): { id: SkillId; level: number }[] {
+		const out = this.pendingLevelUps;
+		this.pendingLevelUps = [];
+		return out;
+	}
+
+	/** Snapshot of all skills (id/level/xp) for the SKILLS_CHANGED event. */
+	snapshot(): { id: SkillId; level: number; xp: number }[] {
+		return SKILL_IDS.map((id) => ({ id, level: this.level(id), xp: this.xp(id) }));
 	}
 
 	meets(id: string, level: number): boolean {

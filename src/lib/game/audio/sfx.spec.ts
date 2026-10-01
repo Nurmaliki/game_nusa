@@ -40,7 +40,8 @@ describe('SFX catalogue', () => {
 			'craft',
 			'build',
 			'quest_advance',
-			'chapter_complete'
+			'chapter_complete',
+			'level_up'
 		]) {
 			expect(SFX[id], `missing sfx "${id}"`).toBeDefined();
 		}

@@ -97,6 +97,8 @@ export interface GameEventMap {
 	QUEST_UPDATED_UI: { revision: number };
 	CHAPTER_COMPLETE: void;
 	SKILLS_CHANGED: { skills: { id: string; level: number; xp: number }[] };
+	/** A skill reached a new level (id + new level) — drives SFX + UI toast. */
+	SKILL_LEVEL_UP: { id: string; level: number };
 	TOAST: { text: string; kind: 'info' | 'success' | 'warning' };
 	/** Direct audio cue request (systems -> audio manager). */
 	SFX: { id: string };

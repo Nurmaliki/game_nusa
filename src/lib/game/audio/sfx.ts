@@ -181,6 +181,15 @@ export const SFX: Record<string, SfxDefinition> = {
 		duration: 0.06,
 		gain: 0.08,
 		lowpassHz: 700
+	},
+	level_up: {
+		id: 'level_up',
+		wave: 'triangle',
+		startHz: 520,
+		endHz: 1040,
+		attack: 0.01,
+		duration: 0.5,
+		gain: 0.26
 	}
 };
 

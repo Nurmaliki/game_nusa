@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { PhaserInput } from '../input/phaser-input';
 import { darknessForHour } from '../systems/game-clock';
+import { SKILL_LABELS } from '../systems/skills';
 import { BALANCE } from '../config/balance';
 import { log } from '../core/logger';
 import { getGameBus } from '../core/event-bus';
@@ -242,7 +243,25 @@ export class WorldScene extends Phaser.Scene {
 			session.emitStats();
 		}
 
+		this.flushSkillEvents(state);
+
 		this.controls.endFrame();
+	}
+
+	/**
+	 * Surface skill level-ups collected by the pure Skills system: fire the
+	 * SKILLS_CHANGED snapshot (so panels refresh) and, per level gained, a
+	 * SKILL_LEVEL_UP event (sound) plus a toast. Drained once per gain.
+	 */
+	private flushSkillEvents(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {
+		const gains = state.skills.drainLevelUps();
+		if (gains.length === 0) return;
+		getGameBus().emit('SKILLS_CHANGED', { skills: state.skills.snapshot() });
+		for (const g of gains) {
+			getGameBus().emit('SKILL_LEVEL_UP', { id: g.id, level: g.level });
+			const label = SKILL_LABELS[g.id] ?? g.id;
+			getGameBus().emit('TOAST', { text: `${label} naik ke level ${g.level}`, kind: 'success' });
+		}
 	}
 
 	private updateBiome(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {

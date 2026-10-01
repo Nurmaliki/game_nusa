@@ -15,6 +15,7 @@ describe('audio event map', () => {
 		expect(EVENT_SFX.PLAYER_DIED).toBe('death');
 		expect(EVENT_SFX.BUILD_PLACED).toBe('build');
 		expect(EVENT_SFX.CHAPTER_COMPLETE).toBe('chapter_complete');
+		expect(EVENT_SFX.SKILL_LEVEL_UP).toBe('level_up');
 	});
 
 	it('resolves combat hits to crit or hit', () => {

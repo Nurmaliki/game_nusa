@@ -13,7 +13,8 @@ export const EVENT_SFX: Partial<Record<GameEventName, string>> = {
 	BUILD_PLACED: 'build',
 	CHAPTER_COMPLETE: 'chapter_complete',
 	QUEST_UPDATED_UI: 'quest_advance',
-	SAVE_COMPLETED: 'ui_confirm'
+	SAVE_COMPLETED: 'ui_confirm',
+	SKILL_LEVEL_UP: 'level_up'
 };
 
 /** Events whose sound depends on the payload. */

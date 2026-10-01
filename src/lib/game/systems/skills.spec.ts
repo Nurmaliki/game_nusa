@@ -82,4 +82,30 @@ describe('Skills', () => {
 		s.deserialize([{ id: 'bogus', level: 9, xp: 9999 }]);
 		expect(s.xp('crafting')).toBe(0);
 	});
+
+	it('records level-ups for draining, once per gain', () => {
+		const s = new Skills();
+		expect(s.drainLevelUps()).toEqual([]);
+		s.award('crafting', xpForLevel(2));
+		const gains = s.drainLevelUps();
+		expect(gains).toEqual([{ id: 'crafting', level: 2 }]);
+		// Drained: a second call returns nothing until the next level-up.
+		expect(s.drainLevelUps()).toEqual([]);
+	});
+
+	it('does not record a level-up when xp does not cross a threshold', () => {
+		const s = new Skills();
+		s.award('gathering', 1);
+		expect(s.drainLevelUps()).toEqual([]);
+	});
+
+	it('snapshot reflects current level and xp for every skill', () => {
+		const s = new Skills();
+		s.award('combat', xpForLevel(3));
+		const snap = s.snapshot();
+		expect(snap).toHaveLength(SKILL_IDS.length);
+		const combat = snap.find((e) => e.id === 'combat');
+		expect(combat?.level).toBe(3);
+		expect(combat?.xp).toBe(xpForLevel(3));
+	});
 });
