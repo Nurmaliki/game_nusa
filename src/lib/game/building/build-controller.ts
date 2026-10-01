@@ -32,7 +32,7 @@ export class BuildController {
 			.rectangle(0, 0, tileSize, tileSize, 0x68d391, 0.35)
 			.setOrigin(0.5, 0.5)
 			.setStrokeStyle(2, 0x2f855a, 1)
-			.setDepth(8000)
+			.setDepth(30000)
 			.setVisible(false);
 	}
 

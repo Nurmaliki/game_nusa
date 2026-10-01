@@ -1,6 +1,15 @@
 import Phaser from 'phaser';
 import { getNpc, NPC_LIST } from '$data/npcs';
 import type { NpcRegistry } from '../systems/npcs';
+import { SPRITE_KEYS } from '../core/sprites';
+
+/** Distinct cloth colours per NPC so each villager reads differently. */
+const NPC_TINTS: Record<string, number> = {
+	nelayan: 0x38b2ac,
+	penjaga_hutan: 0xdd6b20,
+	penambang: 0x718096,
+	tokoh_lelluhur: 0x9f7aea
+};
 
 /**
  * Renders NPCs (see §21 / §36). Presentation only: positions come from the
@@ -18,8 +27,9 @@ export class NpcRenderer {
 	build(registry: NpcRegistry, hour: number): void {
 		for (const def of NPC_LIST) {
 			const pos = registry.positionAt(def.id, hour);
-			const sprite = this.scene.add.sprite(pos.x, pos.y, def.texture).setDepth(45);
-			sprite.setTint(0x63b3ed);
+			const sprite = this.scene.add.sprite(pos.x, pos.y, SPRITE_KEYS.npc).setDepth(pos.y);
+			sprite.setOrigin(0.5, 0.85);
+			sprite.setTint(NPC_TINTS[def.id] ?? 0x63b3ed);
 			this.sprites.set(def.id, sprite);
 		}
 	}
@@ -29,6 +39,7 @@ export class NpcRenderer {
 		for (const [id, sprite] of this.sprites) {
 			const pos = registry.positionAt(id, hour);
 			sprite.setPosition(pos.x, pos.y);
+			sprite.setDepth(pos.y);
 		}
 	}
 

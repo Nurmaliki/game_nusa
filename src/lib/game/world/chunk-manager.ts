@@ -3,6 +3,20 @@ import { getResourceNode } from '$data/resources';
 import { BALANCE } from '../config/balance';
 import { hashString, mulberry32 } from './generator';
 
+/** Blend two 0xRRGGBB colours; t=0 → a, t=1 → b. */
+function mixHex(a: number, b: number, t: number): number {
+	const ar = (a >> 16) & 0xff;
+	const ag = (a >> 8) & 0xff;
+	const ab = a & 0xff;
+	const br = (b >> 16) & 0xff;
+	const bg = (b >> 8) & 0xff;
+	const bb = b & 0xff;
+	const r = Math.round(ar + (br - ar) * t);
+	const g = Math.round(ag + (bg - ag) * t);
+	const bl = Math.round(ab + (bb - ab) * t);
+	return (r << 16) | (g << 8) | bl;
+}
+
 /**
  * Chunk-based world management (see §8 / §41).
  *
@@ -96,6 +110,37 @@ export class ChunkManager {
 	}
 
 	/**
+	 * Ground colour at a world point, softly blended across biome borders.
+	 *
+	 * `biomeAt` snaps to whichever band's radius the point falls in, which makes
+	 * the border a hard line. Here the two nearest bands are blended by how close
+	 * `d` sits to the boundary (within `blend` of it), so coast↔rainforest and
+	 * rainforest↔highlands fade into one another instead of showing a seam.
+	 * Pure function of the world position → chunk textures stay seamless.
+	 */
+	groundTintAt(x: number, y: number, blend = 0.06): number {
+		const nx = Math.floor(x / 256);
+		const ny = Math.floor(y / 256);
+		const d = this.normalizedCenterDistance(x, y) + this.cellJitter(nx, ny);
+
+		// Sorted by startRadius ascending (BIOME_LIST is authored that way).
+		const bands = BIOME_LIST;
+		let lower = bands[0];
+		let upper: BiomeDefinition | null = null;
+		for (let i = 0; i < bands.length; i++) {
+			if (d >= bands[i].startRadius) {
+				lower = bands[i];
+				upper = bands[i + 1] ?? null;
+			}
+		}
+		if (upper && upper.startRadius - d < blend) {
+			const t = 1 - (upper.startRadius - d) / blend; // 0 at edge, 1 past
+			return mixHex(lower.groundColor, upper.groundColor, t * 0.5);
+		}
+		return lower.groundColor;
+	}
+
+	/**
 	 * Deterministic jitter for a 256px cell, memoized. `biomeAt` is on the
 	 * per-frame hot path (biome band checks + wildlife spawn), and recomputing the
 	 * hash + PRNG each call is pure waste, so cache it per cell.
@@ -144,16 +189,19 @@ export class ChunkManager {
 		const weights = biome.resourceWeights;
 		const types = Object.keys(weights);
 		const total = types.reduce((a, t) => a + weights[t], 0);
-		// Node density scales with chunk area but stays deterministic.
-		const count = 3 + Math.floor(rng() * 4); // 3..6 per chunk
+		// Node density scales with chunk area but stays deterministic. Range is a
+		// BALANCE tunable so the island can be made busier/sparser without code.
+		const { nodeDensityMin, nodeDensityMax } = BALANCE.world;
+		const count = nodeDensityMin + Math.floor(rng() * (nodeDensityMax - nodeDensityMin + 1));
 		const occupied: { x: number; y: number }[] = [];
 		let attempts = 0;
 		let placed = 0;
-		while (placed < count && attempts < count * 20) {
+		while (placed < count && attempts < count * 25) {
 			attempts++;
 			const x = originX + 40 + rng() * (chunkPx - 80);
 			const y = originY + 40 + rng() * (chunkPx - 80);
-			if (occupied.some((p) => Math.hypot(p.x - x, p.y - y) < 56)) continue;
+			if (occupied.some((p) => Math.hypot(p.x - x, p.y - y) < BALANCE.world.nodeMinSpacing))
+				continue;
 			occupied.push({ x, y });
 
 			// Weighted pick.

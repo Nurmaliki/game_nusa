@@ -42,6 +42,7 @@ export class WorldScene extends Phaser.Scene {
 	private discovered = new Set<BiomeId>();
 	private build!: BuildController;
 	private buildingSprites = new Map<string, Phaser.GameObjects.Rectangle>();
+	private buildingDetail = new Map<string, Phaser.GameObjects.Rectangle>();
 	private offBuildRequest: (() => void) | null = null;
 	private wildlife!: WildlifeManager;
 	private creatureRenderer!: CreatureRenderer;
@@ -74,10 +75,12 @@ export class WorldScene extends Phaser.Scene {
 
 		this.chunkRenderer = new ChunkRenderer(this, this.chunks, (id) => state.isNodeHarvested(id));
 
-		// Player starts at the saved position, or near the coast (outer ring).
-		const startX = state.player.position.x || this.chunks.pixelWidth / 2;
-		const startY = state.player.position.y || this.chunks.pixelHeight / 2;
-		this.player = new Player(this, startX, startY);
+		// Player starts at the saved position, or on the tropical coast. New games
+		// spawn at ~20% inwardness from the island edge (the starter biome) rather
+		// than the centre, which would drop the player in the highlands.
+		const coastX = state.player.position.x || this.coastSpawnX();
+		const coastY = state.player.position.y || this.coastSpawnY();
+		this.player = new Player(this, coastX, coastY);
 		this.cameras.main.startFollow(
 			this.player.sprite,
 			true,
@@ -86,17 +89,27 @@ export class WorldScene extends Phaser.Scene {
 		);
 
 		// Initial active-chunk load.
-		this.loadChunksAround(startX, startY, true);
+		this.loadChunksAround(coastX, coastY, true);
 
+		// Ambient day/night tint. A soft, camera-fixed overlay (gentler than a
+		// full-world multiply) keeps the world readable at all hours: nights dim
+		// rather than blacken. Oversized so no viewport edge is ever un-tinted.
 		this.ambient = this.add
-			.rectangle(0, 0, this.chunks.pixelWidth, this.chunks.pixelHeight, 0x0a1436, 1)
+			.rectangle(-64, -64, this.scale.width + 128, this.scale.height + 128, 0x0a1436, 1)
 			.setOrigin(0, 0)
-			.setDepth(9000)
+			.setScrollFactor(0)
+			.setDepth(50000)
 			.setBlendMode(Phaser.BlendModes.MULTIPLY)
 			.setAlpha(0);
 
-		this.currentBiome = this.chunks.biomeAt(startX, startY).id;
+		this.currentBiome = this.chunks.biomeAt(coastX, coastY).id;
 		state.setBiome(this.currentBiome);
+		// Emit the initial biome so the HUD never shows a stale default label.
+		const initialBiome = this.chunks.biomeAt(coastX, coastY);
+		getGameBus().emit('BIOME_CHANGED', {
+			biome: initialBiome.id,
+			name: initialBiome.name
+		});
 
 		// Wildlife: spawn manager + renderer.
 		let rngTick = 0;
@@ -133,6 +146,29 @@ export class WorldScene extends Phaser.Scene {
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
 	}
 
+	/** Keep the camera-fixed ambient overlay covering the whole viewport. */
+	private resizeAmbient(): void {
+		const w = this.scale.width + 128;
+		const h = this.scale.height + 128;
+		if (this.ambient.width !== w || this.ambient.height !== h) {
+			this.ambient.setSize(w, h);
+		}
+	}
+
+	/**
+	 * Spawn point on the tropical coast: 20% inwardness from the island edge.
+	 * `biomeAt` bands coast at inwardness [0, 0.42), so this is safely coastal.
+	 */
+	private coastSpawnX(): number {
+		return this.chunks.pixelWidth * 0.5;
+	}
+
+	private coastSpawnY(): number {
+		// Offset vertically from the centre into the outer (coast) ring rather
+		// than the highland core at the exact centre.
+		return this.chunks.pixelHeight * 0.86;
+	}
+
 	private loadChunksAround(x: number, y: number, initial = false): void {
 		const { entered, exited } = this.chunks.updateActive(x, y);
 		this.chunkRenderer.apply(entered, exited);
@@ -149,6 +185,8 @@ export class WorldScene extends Phaser.Scene {
 
 		this.player.update(this.controls, state.stats.energy, time);
 		state.player.position = this.player.position;
+		// Y-sort the player among world objects so tall sprites overlap correctly.
+		this.player.sprite.setDepth(this.player.position.y);
 
 		// Chunk streaming: re-evaluate periodically (cheap, not per-frame).
 		if (time - this.lastChunkCheck > 200) {
@@ -165,7 +203,9 @@ export class WorldScene extends Phaser.Scene {
 		state.advanceSurvival(delta, { sprinting: this.player.isSprinting(this.controls) });
 
 		const darkness = darknessForHour(state.clock.hour);
-		this.ambient.setAlpha(Math.max(0, Math.min(0.72, darkness * 0.72)));
+		// Gentle curve: nights dim to ~0.42 max instead of blacking out.
+		this.ambient.setAlpha(Math.max(0, Math.min(0.42, darkness * 0.42)));
+		this.resizeAmbient();
 
 		// Death check.
 		if (state.stats.health <= 0 && !state.player.isDead) {
@@ -327,17 +367,19 @@ export class WorldScene extends Phaser.Scene {
 		const def = getBuilding(definitionId);
 		if (!def) return;
 		const tile = BALANCE.world.tileSize;
+		const w = def.size.w * tile;
+		const h = def.size.h * tile;
+		const solid = def.solid;
 		const rect = this.add
-			.rectangle(
-				position.x,
-				position.y,
-				def.size.w * tile,
-				def.size.h * tile,
-				def.solid ? 0x8b5a2b : 0x4a5568,
-				0.9
-			)
-			.setStrokeStyle(2, 0x2d3748, 1)
-			.setDepth(50);
+			.rectangle(position.x, position.y, w, h, solid ? 0xb8a06a : 0x9c7b4a, 1)
+			.setStrokeStyle(2, solid ? 0x6b4a2f : 0x4a3220, 1)
+			.setDepth(position.y);
+		// Cross-plank detail so structures read as built, not flat blocks.
+		const detail = this.add
+			.rectangle(position.x, position.y, w - 6, h - 6, 0x000000, 0)
+			.setStrokeStyle(1, solid ? 0xd8c48a : 0xc0a878, 0.7)
+			.setDepth(position.y + 0.01);
+		this.buildingDetail.set(id, detail);
 		this.buildingSprites.set(id, rect);
 	}
 
@@ -514,6 +556,8 @@ export class WorldScene extends Phaser.Scene {
 		this.ambient.destroy();
 		for (const s of this.buildingSprites.values()) s.destroy();
 		this.buildingSprites.clear();
+		for (const s of this.buildingDetail.values()) s.destroy();
+		this.buildingDetail.clear();
 		log.info('WORLD', 'World scene shut down');
 	}
 }

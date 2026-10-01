@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { paint } from './art';
+import { SPRITE_KEYS, ensureSprites, resourceTexture, creatureTexture } from './sprites';
 
 /**
  * Programmatic placeholder textures (see §35 / §66).
@@ -6,6 +8,10 @@ import Phaser from 'phaser';
  * These are ORIGINAL, generated at runtime and clearly temporary. They exist so
  * the game is fully playable and testable before final pixel art is produced.
  * Swapping in real assets later only requires replacing the texture keys.
+ *
+ * The actual pixel art lives in `sprites.ts`; this module keeps the stable
+ * public API (texture-key registry + idempotent ensure fn) that scenes and
+ * entities depend on.
  */
 
 export interface PlaceholderSpec {
@@ -17,118 +23,97 @@ export interface PlaceholderSpec {
 	shape?: 'square' | 'circle' | 'diamond';
 }
 
-const PLAYER_TEX = 'placeholder_player';
-const TREE_TEX = 'placeholder_tree';
-const ROCK_TEX = 'placeholder_rock';
-const BUSH_TEX = 'placeholder_bush';
-const TILE_TEX = 'placeholder_tile';
-const CREATURE_TEX = 'placeholder_creature';
-const PREDATOR_TEX = 'placeholder_predator';
-
+/**
+ * Stable texture keys. Kept for backwards compatibility with entity/ data
+ * definitions; each now resolves to a recognizable sprite rather than a flat
+ * primitive.
+ */
 export const PLACEHOLDER_KEYS = {
-	player: PLAYER_TEX,
-	tree: TREE_TEX,
-	rock: ROCK_TEX,
-	bush: BUSH_TEX,
-	tile: TILE_TEX,
-	creature: CREATURE_TEX,
-	predator: PREDATOR_TEX
+	player: SPRITE_KEYS.player,
+	tree: SPRITE_KEYS.tree,
+	rock: SPRITE_KEYS.rock,
+	bush: SPRITE_KEYS.bush,
+	tile: 'placeholder_tile',
+	creature: SPRITE_KEYS.monkey,
+	predator: SPRITE_KEYS.wolf
 } as const;
 
-function makeSquare(
-	scene: Phaser.Scene,
-	key: string,
-	size: number,
-	color: number,
-	accent?: number
-): void {
-	if (scene.textures.exists(key)) return;
-	const g = scene.make.graphics({ x: 0, y: 0 }, false);
-	g.fillStyle(color, 1);
-	g.fillRect(0, 0, size, size);
-	if (accent !== undefined) {
-		g.lineStyle(2, accent, 1);
-		g.strokeRect(1, 1, size - 2, size - 2);
-	}
-	g.generateTexture(key, size, size);
-	g.destroy();
-}
+/** Backwards-compatible aliases some data files still reference by string. */
+const LEGACY_ALIASES: Record<string, string> = {
+	placeholder_player: SPRITE_KEYS.player,
+	placeholder_tree: SPRITE_KEYS.tree,
+	placeholder_rock: SPRITE_KEYS.rock,
+	placeholder_bush: SPRITE_KEYS.bush,
+	placeholder_creature: SPRITE_KEYS.monkey,
+	placeholder_predator: SPRITE_KEYS.wolf,
+	placeholder_tile: SPRITE_KEYS.tileGrass
+};
 
-function makeCircle(
-	scene: Phaser.Scene,
-	key: string,
-	size: number,
-	color: number,
-	accent?: number
-): void {
-	if (scene.textures.exists(key)) return;
-	const g = scene.make.graphics({ x: 0, y: 0 }, false);
-	g.fillStyle(color, 1);
-	g.fillCircle(size / 2, size / 2, size / 2 - 1);
-	if (accent !== undefined) {
-		g.lineStyle(2, accent, 1);
-		g.strokeCircle(size / 2, size / 2, size / 2 - 2);
-	}
-	g.generateTexture(key, size, size);
-	g.destroy();
-}
-
-function makeDiamond(
-	scene: Phaser.Scene,
-	key: string,
-	size: number,
-	color: number,
-	accent?: number
-): void {
-	if (scene.textures.exists(key)) return;
-	const g = scene.make.graphics({ x: 0, y: 0 }, false);
-	const points = [
-		new Phaser.Math.Vector2(size / 2, 0),
-		new Phaser.Math.Vector2(size, size / 2),
-		new Phaser.Math.Vector2(size / 2, size),
-		new Phaser.Math.Vector2(0, size / 2)
-	];
-	g.fillStyle(color, 1);
-	g.fillPoints(points, true);
-	if (accent !== undefined) {
-		g.lineStyle(2, accent, 1);
-		g.strokePoints(points, true);
-	}
-	g.generateTexture(key, size, size);
-	g.destroy();
+function tileTexture(scene: Phaser.Scene, key: string, color: number, accent: number): void {
+	paint(scene, key, 32, 32, (g) => {
+		g.fillStyle(color, 1);
+		g.fillRect(0, 0, 32, 32);
+		g.fillStyle(accent, 1);
+		g.fillRect(0, 0, 32, 2);
+		g.fillRect(0, 30, 32, 2);
+		g.fillRect(0, 0, 2, 32);
+		g.fillRect(30, 0, 2, 32);
+	});
 }
 
 /** Create every placeholder texture the game currently needs. Idempotent. */
 export function ensurePlaceholderTextures(scene: Phaser.Scene): void {
-	makeCircle(scene, PLAYER_TEX, 28, 0x38a169, 0x22543d); // player = green circle
-	makeSquare(scene, TREE_TEX, 40, 0x2f855a, 0x1c4532); // tree = dark green square
-	makeCircle(scene, ROCK_TEX, 32, 0x718096, 0x2d3748); // rock = grey circle
-	makeCircle(scene, BUSH_TEX, 26, 0x68d391, 0x2f855a); // bush = light green
-	makeSquare(scene, TILE_TEX, 32, 0x1a202c, 0x2d3748); // neutral tile
-	makeCircle(scene, CREATURE_TEX, 24, 0xb7791f, 0x744210); // creature = amber circle
-	makeDiamond(scene, PREDATOR_TEX, 30, 0xc53030, 0x742a2a); // predator = red diamond
+	ensureSprites(scene);
+	// A neutral tile texture kept for any data referencing `placeholder_tile`.
+	tileTexture(scene, 'placeholder_tile', 0x2d3748, 0x4a5568);
 }
+
+/**
+ * Resolve an abstract texture key (possibly a legacy `placeholder_*` string from
+ * a data definition) to a real, drawn sprite texture key. Falls back to the
+ * generic bush sprite when nothing matches, so rendering never crashes.
+ */
+export function resolveTexture(scene: Phaser.Scene, key: string): string {
+	if (scene.textures.exists(key)) return key;
+	const alias = LEGACY_ALIASES[key];
+	if (alias && scene.textures.exists(alias)) return alias;
+	return SPRITE_KEYS.bush;
+}
+
+export { resourceTexture, creatureTexture };
 
 /** Build an arbitrary placeholder at runtime (used by item icons). */
 export function makePlaceholder(scene: Phaser.Scene, spec: PlaceholderSpec): void {
 	const size = spec.size ?? 24;
-	if (spec.shape === 'circle') makeCircle(scene, spec.key, size, spec.color, spec.accent);
-	else if (spec.shape === 'diamond') {
-		if (scene.textures.exists(spec.key)) return;
-		const g = scene.make.graphics({ x: 0, y: 0 }, false);
-		g.fillStyle(spec.color, 1);
-		g.fillPoints(
-			[
-				new Phaser.Math.Vector2(size / 2, 0),
-				new Phaser.Math.Vector2(size, size / 2),
-				new Phaser.Math.Vector2(size / 2, size),
-				new Phaser.Math.Vector2(0, size / 2)
-			],
-			true
-		);
-		g.generateTexture(spec.key, size, size);
-		g.destroy();
-	} else makeSquare(scene, spec.key, size, spec.color, spec.accent);
+	if (scene.textures.exists(spec.key)) return;
+	paint(scene, spec.key, size, size, (g) => {
+		if (spec.shape === 'circle') {
+			g.fillStyle(spec.color, 1);
+			g.fillCircle(size / 2, size / 2, size / 2 - 1);
+			if (spec.accent !== undefined) {
+				g.lineStyle(2, spec.accent, 1);
+				g.strokeCircle(size / 2, size / 2, size / 2 - 2);
+			}
+		} else if (spec.shape === 'diamond') {
+			g.fillStyle(spec.color, 1);
+			g.fillPoints(
+				[
+					new Phaser.Math.Vector2(size / 2, 0),
+					new Phaser.Math.Vector2(size, size / 2),
+					new Phaser.Math.Vector2(size / 2, size),
+					new Phaser.Math.Vector2(0, size / 2)
+				],
+				true
+			);
+		} else {
+			g.fillStyle(spec.color, 1);
+			g.fillRect(0, 0, size, size);
+			if (spec.accent !== undefined) {
+				g.lineStyle(2, spec.accent, 1);
+				g.strokeRect(1, 1, size - 2, size - 2);
+			}
+		}
+	});
 }
 
 /**

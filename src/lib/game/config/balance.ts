@@ -132,7 +132,31 @@ export const BALANCE = {
 		worldChunksX: 16,
 		worldChunksY: 16,
 		coastLineFactor: 0.32,
-		rainforestFactor: 0.34
+		rainforestFactor: 0.34,
+		/** Resource nodes placed per chunk (inclusive range), deterministic. */
+		nodeDensityMin: 14,
+		nodeDensityMax: 20,
+		/** Minimum world-pixel spacing enforced between nodes in a chunk. */
+		nodeMinSpacing: 52,
+		/**
+		 * Per-node-type sprite scale. Landmark props (trees, rocks, ore) are
+		 * drawn at ~1.5 tiles tall so the island reads as populated rather than
+		 * sparse; ground plants and small creatures stay near true size. Keys
+		 * are resource-node type ids; anything unlisted uses `default`.
+		 */
+		nodeSpriteScale: {
+			default: 1,
+			tree: 1.5,
+			palm: 1.5,
+			hardwood_tree: 1.6,
+			pine: 1.5,
+			bamboo_grove: 1.4,
+			rock: 1.25,
+			iron_vein: 1.3,
+			gold_vein: 1.3,
+			ruin_cache: 1.2,
+			clay_mound: 1.2
+		} as Record<string, number>
 	},
 
 	camera: {

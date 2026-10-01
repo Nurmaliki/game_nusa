@@ -19,12 +19,14 @@ export class Player {
 	constructor(scene: Phaser.Scene, x: number, y: number) {
 		this.scene = scene;
 		this.sprite = scene.physics.add.sprite(x, y, PLACEHOLDER_KEYS.player);
+		this.sprite.setOrigin(0.5, 0.85);
 		this.sprite.setDepth(10);
 		const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+		// Feet-centred body so Y-sorting pivots on the ground contact point.
 		body.setCircle(
 			BALANCE.player.bodyRadius,
-			this.sprite.width / 2 - BALANCE.player.bodyRadius,
-			this.sprite.height / 2 - BALANCE.player.bodyRadius
+			this.sprite.width * 0.5 - BALANCE.player.bodyRadius,
+			this.sprite.height * 0.85 - BALANCE.player.bodyRadius
 		);
 		body.setCollideWorldBounds(true);
 	}

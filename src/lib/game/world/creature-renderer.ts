@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getCreature } from '$data/creatures';
 import type { CreatureRuntime } from '../systems/combat';
+import { creatureTexture, SPRITE_KEYS } from '../core/sprites';
 
 /**
  * Renders the live wildlife (see §19 / §34).
@@ -39,22 +40,31 @@ export class CreatureRenderer {
 			if (!rendered) {
 				const def = getCreature(c.definitionId);
 				if (!def) continue;
-				const sprite = this.scene.add.sprite(c.position.x, c.position.y, def.texture).setDepth(40);
-				sprite.setTint(def.behaviour === 'predator' ? 0xff6b6b : 0xffffff);
+				const tex = creatureTexture(c.definitionId);
+				const key = this.scene.textures.exists(tex) ? tex : SPRITE_KEYS.monkey;
+				const sprite = this.scene.add
+					.sprite(c.position.x, c.position.y, key)
+					.setOrigin(0.5, 0.8)
+					.setDepth(c.position.y);
+				// Subtle colour cue: predators get a faint red rim via tint, others natural.
+				if (def.behaviour === 'predator') sprite.setTint(0xffd0d0);
 				const barBg = this.scene.add
-					.rectangle(c.position.x, c.position.y - 22, 30, 4, 0x000000, 0.6)
-					.setDepth(41);
+					.rectangle(c.position.x, c.position.y - 26, 30, 4, 0x000000, 0.6)
+					.setDepth(c.position.y + 0.5);
 				const barFill = this.scene.add
-					.rectangle(c.position.x - 15, c.position.y - 22, 30, 4, 0x68d391, 1)
+					.rectangle(c.position.x - 15, c.position.y - 26, 30, 4, 0x68d391, 1)
 					.setOrigin(0, 0.5)
-					.setDepth(42);
+					.setDepth(c.position.y + 0.6);
 				rendered = { sprite, barBg, barFill };
 				this.map.set(c, rendered);
 			}
 			rendered.sprite.setPosition(c.position.x, c.position.y);
+			rendered.sprite.setDepth(c.position.y);
 			const ratio = c.maxHealth > 0 ? c.health / c.maxHealth : 0;
-			rendered.barBg.setPosition(c.position.x, c.position.y - 22);
-			rendered.barFill.setPosition(c.position.x - 15, c.position.y - 22);
+			rendered.barBg.setPosition(c.position.x, c.position.y - 26);
+			rendered.barBg.setDepth(c.position.y + 0.5);
+			rendered.barFill.setPosition(c.position.x - 15, c.position.y - 26);
+			rendered.barFill.setDepth(c.position.y + 0.6);
 			rendered.barFill.width = 30 * Math.max(0, Math.min(1, ratio));
 			rendered.barBg.setVisible(ratio < 1);
 			rendered.barFill.setVisible(ratio < 1);

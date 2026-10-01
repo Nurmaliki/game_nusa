@@ -386,3 +386,56 @@ turnInQuest/talkToNpc/visitBiome/activeQuests`; rewards granted atomically
 - **Release docs** (`docs/RELEASE.md`): deploy target, pre-release gate, manual
   smoke test, known non-blocking items, versioning policy.
 - `check`, `lint`, `test:unit` (347 tests), `build`, `test:e2e` (18) all pass.
+
+## Post-release: Visual Overhaul
+
+The placeholder world read as a flat, near-black field of coloured dots. Replaced
+it with recognizable, layered programmatic pixel art — still 100% original, still
+no external assets:
+
+- **Sprite system** (`core/art.ts` + `core/sprites.ts`): reusable pixel-drawing
+  primitives (bordered balls, faceted polygons, shaded gradients, colour
+  mix/shade) drive ~25 distinct sprites — broadleaf/pine/palm/bamboo trees,
+  boulder + iron/gold ore veins, berry/herb/mushroom/rare-plant bushes, shell
+  piles, fish, and nine creatures (crab, seagull, hawk, boar, monkey, snake,
+  tiger, crocodile, wolf) plus a shaded player and per-NPC tinted villagers.
+  `resourceTexture(id)` / `creatureTexture(id)` map each content id to its art.
+- **Textured ground** (`world/chunk-renderer.ts`): each chunk's ground is painted
+  once into an offscreen `Graphics` and **baked into a static texture**
+  (`generateTexture`) shown as a single `Image` — a biome base, soft organic
+  patches, scattered blades, and clumped grass tufts. Baking was essential: a
+  live `Graphics` holding thousands of draw commands is re-tessellated every
+  frame, which stalled the game to ~5 fps; baked textures run at 60 fps and
+  never repeat the work. Textures are freed when a chunk leaves the active set.
+- **Seamless biome borders** (`chunk-manager.ts` `groundTintAt`): the ground
+  colour is linearly blended across biome-band edges (instead of snapping at
+  `biomeAt`), so coast↔rainforest↔highlands fade into one another. All ground
+  jitter/patches/tufts are seeded from **world** coordinates, so a patch
+  spanning a chunk border is drawn identically by both chunks — no visible
+  chunk grid anywhere.
+- **Populated world** (`BALANCE.world`): landmark props (trees, ore, ruins) are
+  scaled to ~1.5 tiles tall (`nodeSpriteScale`, keyed by resource type) and node
+  density raised to 14–20 per chunk (`nodeDensityMin/Max`, `nodeMinSpacing`), so
+  the island reads as a living place rather than a sparse field of dots — all
+  tunable from `BALANCE` without code changes.
+- **Readable lighting** (`WorldScene.ts`): the old full-world `MULTIPLY` overlay
+  that blackened the map is now a gentle, camera-fixed ambient tint (nights dim
+  to ~0.42, never black). Biome ground colours were lightened so day is clearly
+  readable.
+- **Y-sorting**: world objects (player, nodes, creatures, NPCs, buildings) use
+  their world-Y as depth so tall sprites overlap correctly; the build ghost and
+  ambient overlay sit above.
+- **Fixes found during verification**:
+  - New games now spawn on the **tropical coast** (as the code comments always
+    intended) instead of the highland centre.
+  - The HUD biome label no longer shows a stale "Pesisir Tropis" default — the
+    initial `BIOME_CHANGED` is emitted on scene start.
+  - E2E `workers` capped at 2 (each test boots a WebGL canvas; one-per-core
+    exhausted the GPU/context pool and crashed browser sessions).
+  - **Ground render stall fixed**: a live per-chunk `Graphics` was re-tessellated
+    every frame, dropping the game to ~5 fps (measured 3–9). Baking each chunk's
+    ground into a static texture restored a steady **60 fps** on GPU (and ~6×
+    faster even under software rendering).
+
+Verified with real screenshots (Playwright) and two consecutive full green E2E
+runs. `check`, `lint`, `test:unit` (347), `build`, `test:e2e` (18) all pass.
