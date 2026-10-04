@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { validatePlacement, type PlacementContext } from './placement';
+import {
+	validatePlacement,
+	describePlacementIssues,
+	PLACEMENT_ISSUE_TEXT,
+	type PlacementContext,
+	type PlacementIssue
+} from './placement';
 import { getBuilding } from '$data/buildings';
 import { Inventory } from '../core/inventory';
 import { getItem } from '$data/items';
@@ -86,5 +92,23 @@ describe('validatePlacement', () => {
 			ctx({ inventory: inv, skills: { crafting: 3 } })
 		);
 		expect(unlocked.issues).not.toContain('locked');
+	});
+});
+
+describe('describePlacementIssues', () => {
+	it('renders every issue code as readable Indonesian (never raw codes)', () => {
+		for (const issue of Object.keys(PLACEMENT_ISSUE_TEXT) as PlacementIssue[]) {
+			const text = describePlacementIssues([issue]);
+			expect(text.length).toBeGreaterThan(0);
+			expect(text).not.toContain('_');
+		}
+	});
+
+	it('joins multiple issues with a separator and de-duplicates', () => {
+		expect(describePlacementIssues(['out_of_range', 'missing_materials'])).toBe(
+			'Terlalu jauh dari kamu · Bahan tidak cukup'
+		);
+		expect(describePlacementIssues(['blocked', 'blocked'])).toBe('Sudah ada bangunan di sini');
+		expect(describePlacementIssues([])).toBe('');
 	});
 });

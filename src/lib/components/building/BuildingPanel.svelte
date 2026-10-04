@@ -3,19 +3,35 @@
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { getItem } from '$data/items';
 	import { BUILDING_LIST } from '$data/buildings';
+	import { describePlacementIssues, type PlacementIssue } from '$game/building/placement';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
 	let revision = $state(0);
 	let inBuildMode = $state<string | null>(null);
-	let preview = $state<{ valid: boolean | null; issues: string[] }>({ valid: null, issues: [] });
+	let preview = $state<{
+		valid: boolean | null;
+		issues: PlacementIssue[];
+		missing: { id: string; qty: number }[];
+	}>({
+		valid: null,
+		issues: [],
+		missing: []
+	});
 	const session = getGameSession();
 
 	$effect(() => {
 		const bus = getGameBus();
 		const offInv = bus.on('INVENTORY_CHANGED', (p) => (revision = p.revision));
 		const offMode = bus.on('BUILD_MODE_CHANGED', (p) => (inBuildMode = p.definitionId));
-		const offPreview = bus.on('BUILD_PREVIEW', (p) => (preview = p));
+		const offPreview = bus.on('BUILD_PREVIEW', (p) => {
+			// The bus payload is plain (engine-agnostic); narrow it here.
+			preview = {
+				valid: p.valid,
+				issues: p.issues as PlacementIssue[],
+				missing: p.missing ?? []
+			};
+		});
 		return () => {
 			offInv();
 			offMode();
@@ -88,7 +104,11 @@
 	<div class="build-hint" role="status">
 		Klik untuk menempatkan · R untuk memutar · Esc untuk batal
 		{#if preview.valid === false}
-			<span class="invalid">Tidak valid: {preview.issues.join(', ')}</span>
+			<span class="invalid">
+				Tidak bisa dibangun: {describePlacementIssues(preview.issues)}{preview.missing.length > 0
+					? ` (${preview.missing.map((m) => `${label(m.id)} kurang ${m.qty}`).join(', ')})`
+					: ''}
+			</span>
 		{/if}
 	</div>
 {/if}

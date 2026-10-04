@@ -116,7 +116,11 @@ export class BuildController {
 		this.ghost.setFillStyle(result.valid ? 0x68d391 : 0xf56565, 0.4);
 		this.ghost.setStrokeStyle(2, result.valid ? 0x2f855a : 0xc53030, 1);
 
-		getGameBus().emit('BUILD_PREVIEW', { valid: result.valid, issues: result.issues });
+		getGameBus().emit('BUILD_PREVIEW', {
+			valid: result.valid,
+			issues: result.issues,
+			missing: result.missing
+		});
 		return result.valid;
 	}
 

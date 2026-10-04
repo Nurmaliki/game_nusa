@@ -39,6 +39,32 @@ export interface PlacementResult {
 	missing: ItemStack[];
 }
 
+/**
+ * Player-facing Indonesian copy for each placement issue. Kept next to the
+ * issue union so a new issue code can never ship without a human-readable
+ * message (the UI must never show raw codes like `out_of_range`).
+ */
+export const PLACEMENT_ISSUE_TEXT: Record<PlacementIssue, string> = {
+	out_of_range: 'Terlalu jauh dari kamu',
+	invalid_terrain: 'Tanah di sini tidak bisa dibangun',
+	blocked: 'Sudah ada bangunan di sini',
+	too_close_to_resource: 'Terlalu dekat dengan tumbuhan/batu',
+	missing_materials: 'Bahan tidak cukup',
+	locked: 'Belum terbuka'
+};
+
+/** Format one or more placement issues as a readable Indonesian sentence. */
+export function describePlacementIssues(issues: PlacementIssue[]): string {
+	const seen = new Set<PlacementIssue>();
+	const parts: string[] = [];
+	for (const issue of issues) {
+		if (seen.has(issue)) continue;
+		seen.add(issue);
+		parts.push(PLACEMENT_ISSUE_TEXT[issue]);
+	}
+	return parts.join(' · ');
+}
+
 export function validatePlacement(def: BuildingDefinition, ctx: PlacementContext): PlacementResult {
 	const issues: PlacementIssue[] = [];
 

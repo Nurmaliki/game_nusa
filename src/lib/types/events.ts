@@ -89,7 +89,11 @@ export interface GameEventMap {
 	BUILD_MODE_CHANGED: { definitionId: string | null };
 	/** UI -> scene command to enter (definitionId) or leave (null) build mode. */
 	BUILD_MODE_REQUEST: { definitionId: string | null };
-	BUILD_PREVIEW: { valid: boolean | null; issues: string[] };
+	BUILD_PREVIEW: {
+		valid: boolean | null;
+		issues: string[];
+		missing?: { id: string; qty: number }[];
+	};
 	BUILD_PLACED: { buildingId: string; definitionId: string };
 	DIALOGUE_OPENED: { npcId: string; npcName: string; role: string; nodeId: string };
 	DIALOGUE_CLOSED: void;
