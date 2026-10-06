@@ -30,20 +30,24 @@
 	});
 
 	const unlockedCount = $derived(rows.filter((r) => r.done).length);
+	const pct = $derived(rows.length ? Math.round((unlockedCount / rows.length) * 100) : 0);
 </script>
 
 {#if open}
-	<div class="overlay" role="dialog" aria-label="Pencapaian">
-		<div class="panel">
-			<header>
-				<h2>Pencapaian</h2>
-				<span class="count">{unlockedCount}/{rows.length}</span>
+	<div class="u-scrim" role="dialog" aria-label="Pencapaian">
+		<div class="panel u-panel">
+			<header class="u-header">
+				<h2>🏆 Pencapaian</h2>
 				<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
 			</header>
+			<div class="progress">
+				<div class="track"><div class="fill" style="width: {pct}%"></div></div>
+				<span class="count">{unlockedCount}/{rows.length}</span>
+			</div>
 			<ul class="list">
 				{#each rows as row (row.id)}
 					<li class="row" class:done={row.done}>
-						<span class="mark" aria-hidden="true">{row.done ? '★' : '☆'}</span>
+						<span class="mark" aria-hidden="true">{row.done ? '🏅' : '🔒'}</span>
 						<div class="body">
 							<span class="name">{row.name}</span>
 							<span class="desc">{row.description}</span>
@@ -56,48 +60,49 @@
 {/if}
 
 <style>
-	.overlay {
-		position: absolute;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.55);
-		display: grid;
-		place-items: center;
-		z-index: 50;
-		padding: 16px;
-	}
 	.panel {
-		background: #141c2e;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 14px;
-		padding: 16px;
-		width: min(440px, 100%);
-		max-height: min(70vh, 560px);
+		width: min(460px, 100%);
+		max-height: min(76vh, 620px);
 		display: flex;
 		flex-direction: column;
-		color: #f7fafc;
-		font-family: var(--font-ui);
+		padding: 18px;
 	}
-	header {
+	.close {
+		width: 34px;
+		height: 34px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
+		font-size: 1rem;
+		font-weight: 800;
+		cursor: pointer;
+	}
+	.progress {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		margin-bottom: 12px;
+		margin-bottom: 14px;
 	}
-	h2 {
-		margin: 0;
-		font-size: 1.15rem;
+	.track {
 		flex: 1;
+		height: 12px;
+		border-radius: var(--radius-pill);
+		background: rgba(20, 12, 6, 0.5);
+		overflow: hidden;
+		box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.5);
+	}
+	.fill {
+		height: 100%;
+		border-radius: var(--radius-pill);
+		background: linear-gradient(90deg, var(--amber-dark), var(--amber));
+		box-shadow: inset 0 2px 0 rgba(247, 241, 227, 0.3);
 	}
 	.count {
-		font-size: 0.85rem;
-		opacity: 0.7;
-	}
-	.close {
-		background: transparent;
-		border: none;
-		color: inherit;
-		font-size: 1.2rem;
-		cursor: pointer;
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: var(--amber);
+		font-variant-numeric: tabular-nums;
 	}
 	.list {
 		list-style: none;
@@ -110,33 +115,33 @@
 	}
 	.row {
 		display: flex;
-		gap: 10px;
+		gap: 12px;
 		align-items: flex-start;
-		padding: 8px 10px;
-		border-radius: 10px;
-		background: rgba(255, 255, 255, 0.04);
+		padding: 10px 12px;
+		border-radius: var(--radius);
+		background: rgba(20, 12, 6, 0.25);
+		border: 2px solid transparent;
 		opacity: 0.7;
 	}
 	.row.done {
 		opacity: 1;
-		background: rgba(56, 161, 105, 0.16);
-		border: 1px solid rgba(104, 211, 145, 0.35);
+		background: linear-gradient(180deg, rgba(107, 191, 90, 0.18), rgba(20, 12, 6, 0.2));
+		border-color: rgba(107, 191, 90, 0.45);
 	}
 	.mark {
-		color: #f6c453;
-		font-size: 1.1rem;
-		line-height: 1.3;
+		font-size: 1.3rem;
+		line-height: 1.2;
 	}
 	.body {
 		display: flex;
 		flex-direction: column;
 	}
 	.name {
-		font-weight: 600;
-		font-size: 0.92rem;
+		font-weight: 800;
+		font-size: 0.94rem;
 	}
 	.desc {
 		font-size: 0.78rem;
-		opacity: 0.8;
+		color: var(--ink-soft);
 	}
 </style>

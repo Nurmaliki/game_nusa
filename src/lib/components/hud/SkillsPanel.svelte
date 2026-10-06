@@ -9,6 +9,15 @@
 
 	const LABELS = SKILL_LABELS;
 
+	// A friendly glyph per skill id (falls back to a star).
+	const SKILL_ICON: Record<string, string> = {
+		gathering: '🌿',
+		crafting: '🔨',
+		survival: '🔥',
+		combat: '⚔️',
+		fishing: '🎣'
+	};
+
 	$effect(() => {
 		// Re-read on any inventory/stat change (skills change alongside them).
 		const t = setInterval(() => (revision += 1), 800);
@@ -30,23 +39,26 @@
 </script>
 
 {#if open}
-	<div class="overlay" role="dialog" aria-label="Keterampilan">
-		<div class="panel">
-			<header>
-				<h2>Keterampilan</h2>
+	<div class="u-scrim" role="dialog" aria-label="Keterampilan">
+		<div class="panel u-panel">
+			<header class="u-header">
+				<h2>🌱 Keterampilan</h2>
 				<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
 			</header>
 			<ul class="skills">
 				{#each rows as row (row.id)}
 					<li class="skill">
-						<div class="top">
-							<span class="name">{row.name}</span>
-							<span class="level">Lv {row.level}</span>
+						<span class="badge" aria-hidden="true">{SKILL_ICON[row.id] ?? '⭐'}</span>
+						<div class="main">
+							<div class="top">
+								<span class="name">{row.name}</span>
+								<span class="level">Lv {row.level}</span>
+							</div>
+							<div class="bar" role="progressbar" aria-valuenow={Math.round(row.progress * 100)}>
+								<div class="fill" style="width: {Math.round(row.progress * 100)}%"></div>
+							</div>
+							<span class="xp">{row.xp} XP</span>
 						</div>
-						<div class="bar" role="progressbar" aria-valuenow={Math.round(row.progress * 100)}>
-							<div class="fill" style="width: {Math.round(row.progress * 100)}%"></div>
-						</div>
-						<span class="xp">{row.xp} XP</span>
 					</li>
 				{/each}
 			</ul>
@@ -55,39 +67,19 @@
 {/if}
 
 <style>
-	.overlay {
-		position: absolute;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.55);
-		display: grid;
-		place-items: center;
-		z-index: 50;
-		padding: 16px;
-	}
 	.panel {
-		background: #141c2e;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 14px;
-		padding: 16px;
-		width: min(420px, 100%);
-		color: #f7fafc;
-		font-family: var(--font-ui);
-	}
-	header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.15rem;
+		width: min(460px, 100%);
+		padding: 18px;
 	}
 	.close {
-		background: transparent;
-		border: none;
-		color: inherit;
-		font-size: 1.2rem;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
+		font-size: 1rem;
+		font-weight: 800;
 		cursor: pointer;
 	}
 	.skills {
@@ -100,6 +92,23 @@
 	}
 	.skill {
 		display: flex;
+		gap: 12px;
+		align-items: center;
+	}
+	.badge {
+		display: grid;
+		place-items: center;
+		width: 42px;
+		height: 42px;
+		flex: 0 0 auto;
+		font-size: 1.3rem;
+		border-radius: var(--radius);
+		background: linear-gradient(180deg, rgba(247, 241, 227, 0.1), rgba(20, 12, 6, 0.3));
+		border: 2px solid var(--border-warm);
+	}
+	.main {
+		flex: 1;
+		display: flex;
 		flex-direction: column;
 		gap: 4px;
 	}
@@ -107,22 +116,26 @@
 		display: flex;
 		justify-content: space-between;
 		font-size: 0.9rem;
+		font-weight: 700;
 	}
 	.level {
-		opacity: 0.75;
+		color: var(--amber);
 	}
 	.bar {
-		height: 8px;
-		border-radius: 4px;
-		background: rgba(255, 255, 255, 0.1);
+		height: 10px;
+		border-radius: var(--radius-pill);
+		background: rgba(20, 12, 6, 0.5);
 		overflow: hidden;
+		box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.5);
 	}
 	.fill {
 		height: 100%;
-		background: linear-gradient(90deg, #38a169, #68d391);
+		border-radius: var(--radius-pill);
+		background: linear-gradient(90deg, var(--green-dark), var(--green-light));
+		box-shadow: inset 0 2px 0 rgba(247, 241, 227, 0.3);
 	}
 	.xp {
 		font-size: 0.7rem;
-		opacity: 0.6;
+		color: var(--ink-muted);
 	}
 </style>

@@ -30,7 +30,7 @@
 			<h1>BAB {roman(chapter)} SELESAI</h1>
 			<p class="subtitle">{title}</p>
 			<p>{body}</p>
-			<button onclick={() => (visible = false)}>
+			<button class="u-btn" onclick={() => (visible = false)}>
 				{chapter >= 2 ? 'Terus menjelajah' : 'Lanjutkan menjelajah'}
 			</button>
 		</div>
@@ -43,43 +43,35 @@
 		inset: 0;
 		display: grid;
 		place-items: center;
-		background: linear-gradient(180deg, rgba(4, 10, 24, 0.9), rgba(4, 10, 24, 0.96));
+		background: radial-gradient(circle at 50% 35%, rgba(30, 51, 40, 0.94), rgba(4, 10, 8, 0.97));
 		z-index: 70;
 		padding: 24px;
 	}
 	.card {
 		text-align: center;
-		color: #f7fafc;
+		color: var(--ink);
 		font-family: var(--font-ui);
-		max-width: 460px;
+		max-width: 480px;
 	}
 	h1 {
-		letter-spacing: 0.18em;
-		font-size: 1.8rem;
-		margin-bottom: 12px;
-		color: #68d391;
+		font-family: var(--font-display);
+		letter-spacing: 0.16em;
+		font-size: 2rem;
+		margin: 0 0 14px;
+		color: var(--green-light);
+		text-shadow: 0 3px 0 rgba(20, 12, 6, 0.5);
 	}
 	.subtitle {
-		margin: 0 0 10px;
+		margin: 0 0 12px;
 		font-size: 0.95rem;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		color: #f6c453;
-		opacity: 0.95;
+		color: var(--amber);
+		font-weight: 700;
 	}
 	p {
-		line-height: 1.6;
-		opacity: 0.9;
-	}
-	button {
-		margin-top: 16px;
-		padding: 10px 20px;
-		border-radius: 10px;
-		border: 1px solid #388a69;
-		background: #2f855a;
-		color: #fff;
-		cursor: pointer;
-		font-family: inherit;
-		font-size: 1rem;
+		line-height: 1.65;
+		color: var(--ink-soft);
+		margin: 0;
 	}
 </style>

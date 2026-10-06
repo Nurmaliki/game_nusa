@@ -56,12 +56,13 @@
 		left: 0;
 		right: 0;
 		z-index: 90;
-		padding: 6px 12px;
+		padding: 7px 12px;
 		text-align: center;
 		font-size: 0.8rem;
-		background: #744210;
-		color: #fefcbf;
-		font-family: system-ui, sans-serif;
+		font-weight: 700;
+		background: linear-gradient(180deg, var(--amber), var(--amber-dark));
+		color: #2a1c05;
+		font-family: var(--font-ui);
 	}
 	.pill {
 		position: fixed;
@@ -71,33 +72,36 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 6px 10px;
-		border-radius: 999px;
+		padding: 6px 12px;
+		border-radius: var(--radius-pill);
 		font-size: 0.72rem;
-		font-family: system-ui, sans-serif;
-		background: rgba(11, 18, 32, 0.82);
-		color: #e2e8f0;
-		border: 1px solid rgba(255, 255, 255, 0.12);
+		font-weight: 600;
+		font-family: var(--font-ui);
+		background: linear-gradient(180deg, rgba(56, 81, 62, 0.9), rgba(43, 63, 48, 0.9));
+		color: var(--ink);
+		border: 2px solid var(--wood-dark);
+		box-shadow: var(--shadow-soft);
 		backdrop-filter: blur(6px);
 	}
 	.pill.ok .dot {
-		background: #68d391;
+		background: var(--green-light);
 	}
 	.pill.warn .dot {
-		background: #f6ad55;
+		background: var(--amber);
 	}
 	.dot {
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: #a0aec0;
+		background: var(--ink-muted);
 	}
 	.pill button {
-		padding: 2px 8px;
-		border-radius: 999px;
+		padding: 3px 10px;
+		border-radius: var(--radius-pill);
 		border: none;
-		background: #38a169;
-		color: white;
+		background: var(--green);
+		color: #16241d;
+		font-weight: 800;
 		font-size: 0.7rem;
 		cursor: pointer;
 	}

@@ -151,7 +151,7 @@
 
 <style>
 	.slots {
-		margin-top: 24px;
+		margin-top: 26px;
 		text-align: left;
 	}
 	.head {
@@ -160,11 +160,12 @@
 		align-items: center;
 	}
 	h2 {
+		font-family: var(--font-display);
 		font-size: 0.85rem;
 		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		opacity: 0.7;
-		margin: 0 0 10px;
+		letter-spacing: 0.1em;
+		color: var(--amber);
+		margin: 0 0 12px;
 	}
 	ul {
 		list-style: none;
@@ -180,10 +181,10 @@
 		align-items: center;
 		gap: 12px;
 		flex-wrap: wrap;
-		padding: 10px 12px;
-		border-radius: 10px;
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		padding: 12px 14px;
+		border-radius: var(--radius);
+		background: linear-gradient(180deg, rgba(247, 241, 227, 0.05), rgba(20, 12, 6, 0.25));
+		border: 2px solid var(--border-warm);
 	}
 	.meta {
 		display: flex;
@@ -191,9 +192,12 @@
 		gap: 2px;
 		min-width: 140px;
 	}
+	.meta strong {
+		font-family: var(--font-display);
+	}
 	.sub {
 		font-size: 0.72rem;
-		opacity: 0.6;
+		color: var(--ink-muted);
 	}
 	.actions {
 		display: flex;
@@ -202,38 +206,47 @@
 	}
 	.actions button,
 	button.ghost {
-		padding: 6px 10px;
+		padding: 7px 12px;
 		font-size: 0.8rem;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		background: rgba(255, 255, 255, 0.06);
-		color: inherit;
+		font-weight: 700;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
 		cursor: pointer;
+		transition:
+			transform 0.08s ease,
+			filter 0.12s ease;
+	}
+	.actions button:hover,
+	button.ghost:hover {
+		filter: brightness(1.12);
 	}
 	button.primary {
-		background: #38a169;
-		border-color: #38a169;
-		font-weight: 700;
+		background: linear-gradient(180deg, var(--green-light), var(--green));
+		border-color: var(--green-dark);
+		color: #16241d;
 	}
 	button.danger {
-		border-color: rgba(229, 62, 62, 0.5);
-		color: #feb2b2;
+		border-color: #8a2d2d;
+		background: linear-gradient(180deg, #c9615d, #a8413d);
+		color: #fff;
 	}
 	button:disabled {
-		opacity: 0.4;
+		opacity: 0.5;
 		cursor: not-allowed;
 	}
 	.empty {
-		opacity: 0.6;
+		color: var(--ink-muted);
 		font-size: 0.9rem;
 	}
 	.msg {
 		font-size: 0.82rem;
 		margin: 0 0 10px;
-		color: #9ae6b4;
+		color: var(--green-light);
 	}
 	.msg.warning {
-		color: #fbd38d;
+		color: var(--amber);
 	}
 	.hidden-file {
 		display: none;

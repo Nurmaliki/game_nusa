@@ -97,14 +97,16 @@
 		font-family: var(--font-ui);
 	}
 	.card {
-		background: rgba(20, 28, 46, 0.92);
-		border: 1px solid rgba(255, 255, 255, 0.14);
-		border-radius: 12px;
-		padding: 10px 14px;
+		background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+		border: 2px solid var(--wood-dark);
+		border-radius: var(--radius);
+		padding: 12px 16px;
 		min-width: 280px;
-		max-width: min(420px, 90vw);
-		color: #f7fafc;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+		max-width: min(440px, 90vw);
+		color: var(--ink);
+		box-shadow:
+			var(--shadow-soft),
+			inset 0 0 0 2px var(--border-warm);
 		pointer-events: auto;
 	}
 	.head {
@@ -115,16 +117,19 @@
 		margin-bottom: 6px;
 	}
 	.title {
-		font-size: 0.72rem;
-		letter-spacing: 0.14em;
+		font-family: var(--font-display);
+		font-size: 0.74rem;
+		font-weight: 800;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		opacity: 0.7;
+		color: var(--amber);
 	}
 	.skip {
 		background: transparent;
 		border: none;
-		color: #90cdf4;
+		color: var(--sky);
 		font-size: 0.75rem;
+		font-weight: 700;
 		cursor: pointer;
 	}
 	.step {
@@ -134,33 +139,36 @@
 		font-size: 0.95rem;
 	}
 	.marker {
-		color: #68d391;
+		color: var(--green-light);
+		font-weight: 800;
 	}
 	.hint {
 		margin-left: 6px;
 		font-size: 0.78rem;
-		opacity: 0.65;
+		color: var(--ink-muted);
 	}
 	.dots {
 		list-style: none;
 		display: flex;
 		gap: 6px;
-		margin: 10px 0 0;
+		margin: 12px 0 0;
 		padding: 0;
 	}
 	.dots li {
-		width: 8px;
-		height: 8px;
+		width: 9px;
+		height: 9px;
 		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.18);
+		background: rgba(20, 12, 6, 0.5);
 	}
 	.dots li.done {
-		background: #68d391;
+		background: var(--green);
+		box-shadow: 0 0 0 2px rgba(107, 191, 90, 0.3);
 	}
 	.flash {
 		display: block;
 		margin-top: 8px;
 		font-size: 0.78rem;
-		color: #68d391;
+		font-weight: 700;
+		color: var(--green-light);
 	}
 </style>

@@ -115,7 +115,16 @@
 				place: (buildingId: string) => {
 					const state = session.state;
 					if (!state) return;
-					state.addBuilding(buildingId, { ...state.player.position }, []);
+					const r = state.addBuilding(buildingId, { ...state.player.position }, []);
+					// The test driver places finished structures (the player has
+					// "already built" them). If a construction-time feature is
+					// present, finish it immediately so a station is usable in the
+					// same evaluate() batch; otherwise buildings are instant already.
+					if (r.ok) {
+						(state as { advanceConstruction?: (ms: number) => unknown }).advanceConstruction?.(
+							Number.MAX_SAFE_INTEGER
+						);
+					}
 				},
 				craft: (recipeId: string) => session.state?.craftAt(recipeId),
 				talk: (npcId: string) => {
@@ -378,13 +387,28 @@
 	}
 	.topbar button,
 	.controls button {
-		padding: 8px 12px;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		background: rgba(11, 18, 32, 0.75);
-		color: #f7fafc;
-		cursor: pointer;
+		padding: 9px 14px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
 		font-family: var(--font-ui);
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: 0 3px 0 var(--wood-dark);
+		transition:
+			transform 0.08s ease,
+			box-shadow 0.08s ease,
+			filter 0.12s ease;
+	}
+	.topbar button:hover,
+	.controls button:hover {
+		filter: brightness(1.1);
+	}
+	.topbar button:active,
+	.controls button:active {
+		transform: translateY(2px);
+		box-shadow: 0 1px 0 var(--wood-dark);
 	}
 	.controls {
 		position: absolute;
@@ -393,47 +417,83 @@
 		z-index: 20;
 		display: flex;
 		gap: 8px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		max-width: 42vw;
+	}
+	.controls button {
+		font-size: 0.8rem;
+		padding: 8px 12px;
 	}
 	.controls button.active {
-		background: #38a169;
-		border-color: #38a169;
+		background: linear-gradient(180deg, var(--green-light), var(--green));
+		border-color: var(--green-dark);
+		color: #16241d;
 	}
 	.toast {
 		position: absolute;
-		bottom: 96px;
+		bottom: 108px;
 		left: 50%;
 		transform: translateX(-50%);
-		background: rgba(11, 18, 32, 0.9);
-		color: #f7fafc;
-		padding: 8px 16px;
-		border-radius: 8px;
+		background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+		color: var(--ink);
+		padding: 10px 20px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
 		z-index: 30;
 		font-family: var(--font-ui);
+		font-weight: 700;
+		box-shadow:
+			var(--shadow-soft),
+			inset 0 0 0 2px var(--border-warm);
+		animation: toast-in 0.2s ease;
+	}
+	@keyframes toast-in {
+		from {
+			transform: translate(-50%, 10px);
+			opacity: 0;
+		}
 	}
 	.error-overlay {
 		position: absolute;
 		inset: 0;
 		display: grid;
 		place-items: center;
-		background: rgba(0, 0, 0, 0.75);
+		background: rgba(4, 8, 6, 0.8);
 		z-index: 60;
 	}
 	.error-box {
-		background: #1a202c;
-		padding: 24px;
-		border-radius: 12px;
-		max-width: 380px;
-		color: #f7fafc;
+		background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+		padding: 26px;
+		border-radius: var(--radius-lg);
+		border: 3px solid var(--wood-dark);
+		max-width: 400px;
+		color: var(--ink);
 		text-align: center;
 		font-family: var(--font-ui);
 	}
+	.error-box h2 {
+		margin: 0 0 10px;
+		font-family: var(--font-display);
+		color: var(--clay);
+	}
+	.error-box p {
+		color: var(--ink-soft);
+		line-height: 1.5;
+	}
 	.error-box button {
-		margin-top: 12px;
-		padding: 8px 16px;
-		border-radius: 8px;
-		border: none;
-		background: #38a169;
-		color: white;
+		margin-top: 16px;
+		padding: 11px 22px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--green-dark);
+		background: linear-gradient(180deg, var(--green-light), var(--green));
+		color: #16241d;
+		font-weight: 800;
 		cursor: pointer;
+		box-shadow: 0 4px 0 var(--green-dark);
+	}
+	.error-box button:active {
+		transform: translateY(3px);
+		box-shadow: 0 1px 0 var(--green-dark);
 	}
 </style>

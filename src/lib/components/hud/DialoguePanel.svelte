@@ -70,9 +70,10 @@
 
 {#if open && node}
 	<div class="overlay" role="dialog" aria-label="Dialog {open.npcName}">
-		<div class="box">
+		<div class="box u-panel">
 			<header>
-				<div>
+				<span class="avatar" aria-hidden="true">{open.npcName.slice(0, 1).toUpperCase()}</span>
+				<div class="who">
 					<span class="name">{open.npcName}</span>
 					<span class="role">{open.role}</span>
 				</div>
@@ -86,7 +87,9 @@
 			<div class="choices">
 				{#each node.choices as choice, i (i)}
 					{#if canShow(choice)}
-						<button onclick={() => choose(choice.next, choice.questId)}>{choice.text}</button>
+						<button onclick={() => choose(choice.next, choice.questId)}>
+							<span class="bullet">›</span>{choice.text}
+						</button>
 					{/if}
 				{/each}
 			</div>
@@ -107,59 +110,96 @@
 	}
 	.box {
 		pointer-events: auto;
-		background: #141c2e;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 14px;
-		padding: 16px;
-		width: min(620px, 100%);
-		color: #f7fafc;
-		font-family: var(--font-ui);
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+		padding: 16px 18px;
+		width: min(640px, 100%);
+		animation: rise 0.22s ease;
+	}
+	@keyframes rise {
+		from {
+			transform: translateY(16px);
+			opacity: 0;
+		}
 	}
 	header {
 		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 10px;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 12px;
+		padding-bottom: 10px;
+		border-bottom: 2px dashed rgba(247, 241, 227, 0.14);
+	}
+	.avatar {
+		display: grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		border-radius: var(--radius-pill);
+		background: linear-gradient(180deg, var(--sky), #4a8fc0);
+		border: 2px solid var(--wood-dark);
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: 1.3rem;
+		color: #12222e;
+	}
+	.who {
+		flex: 1;
 	}
 	.name {
-		font-weight: 700;
-		font-size: 1.05rem;
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: 1.1rem;
 	}
 	.role {
 		display: block;
-		font-size: 0.72rem;
-		opacity: 0.6;
+		font-size: 0.74rem;
+		color: var(--ink-muted);
 	}
 	.close {
-		background: transparent;
-		border: none;
-		color: inherit;
-		font-size: 1.1rem;
+		width: 32px;
+		height: 32px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
+		font-weight: 800;
 		cursor: pointer;
 	}
 	.lines p {
-		margin: 0 0 6px;
-		line-height: 1.45;
+		margin: 0 0 8px;
+		line-height: 1.55;
+		color: var(--ink-soft);
 	}
 	.choices {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
-		margin-top: 12px;
+		gap: 8px;
+		margin-top: 14px;
 	}
 	.choices button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		text-align: left;
-		padding: 9px 12px;
-		border-radius: 8px;
-		border: 1px solid rgba(255, 255, 255, 0.15);
-		background: rgba(255, 255, 255, 0.05);
-		color: #f7fafc;
+		padding: 10px 14px;
+		border-radius: var(--radius);
+		border: 2px solid var(--border-warm);
+		background: linear-gradient(180deg, rgba(247, 241, 227, 0.06), rgba(20, 12, 6, 0.2));
+		color: var(--ink);
 		cursor: pointer;
 		font-family: inherit;
+		font-size: 0.9rem;
+		transition:
+			transform 0.08s ease,
+			border-color 0.12s ease,
+			background 0.12s ease;
 	}
 	.choices button:hover {
-		background: rgba(104, 211, 145, 0.18);
-		border-color: #68d391;
+		background: linear-gradient(180deg, rgba(107, 191, 90, 0.24), rgba(20, 12, 6, 0.2));
+		border-color: var(--green);
+		transform: translateX(3px);
+	}
+	.bullet {
+		color: var(--green-light);
+		font-weight: 800;
 	}
 </style>

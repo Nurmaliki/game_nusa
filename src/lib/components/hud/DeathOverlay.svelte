@@ -20,8 +20,10 @@
 
 {#if dead}
 	<div class="death" role="alert">
-		<h2>Tumbang…</h2>
-		<p>Sebagian barang tertinggal dalam tas. Kembali ke lokasi untuk mengambilnya.</p>
+		<div class="card u-panel">
+			<h2>Tumbang…</h2>
+			<p>Sebagian barang tertinggal dalam tas. Kembali ke lokasi untuk mengambilnya.</p>
+		</div>
 	</div>
 {/if}
 
@@ -31,22 +33,28 @@
 		inset: 0;
 		display: grid;
 		place-items: center;
-		align-content: center;
-		gap: 8px;
-		background: radial-gradient(circle, rgba(120, 10, 10, 0.35), rgba(0, 0, 0, 0.75));
-		color: #f7fafc;
+		background: radial-gradient(circle, rgba(150, 20, 20, 0.4), rgba(4, 8, 6, 0.85));
 		z-index: 55;
 		text-align: center;
 		font-family: var(--font-ui);
 		pointer-events: none;
+		padding: 24px;
+	}
+	.card {
+		padding: 26px 30px;
+		max-width: 380px;
 	}
 	h2 {
-		margin: 0;
-		font-size: 2rem;
-		letter-spacing: 0.08em;
+		margin: 0 0 10px;
+		font-family: var(--font-display);
+		font-size: 2.2rem;
+		letter-spacing: 0.06em;
+		color: var(--clay);
+		text-shadow: 0 3px 0 rgba(20, 12, 6, 0.5);
 	}
 	p {
-		opacity: 0.85;
-		max-width: 320px;
+		color: var(--ink-soft);
+		margin: 0;
+		line-height: 1.5;
 	}
 </style>

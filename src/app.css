@@ -1,5 +1,84 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * Nusantara Survival — Global design system
+ *
+ * A cozy, Harvest-Town-inspired UI language: warm earthy + wood tones,
+ * rounded "carved" panels, soft shadows, chunky friendly buttons and a
+ * rounded typeface. Every component consumes these tokens so the whole
+ * surface (menu, HUD, panels, dialogs) feels like one hand-made game.
+ * ──────────────────────────────────────────────────────────────────── */
+
 :root {
-	--font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	/* Typeface: a soft, rounded stack that reads "cozy game" without any
+	   external font download. Falls back gracefully across platforms. */
+	--font-ui:
+		'Nunito', 'Baloo 2', 'Quicksand', 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI',
+		sans-serif;
+	--font-display: 'Baloo 2', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+	--font-numeric: 'Nunito', ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+
+	/* Warm parchment / wood surfaces (background → panel → raised). */
+	--bg-deep: #16241d;
+	--bg: #1e3328;
+	--bg-warm: #24382c;
+	--panel: #2b3f30;
+	--panel-raised: #38513e;
+	--panel-inset: #1c2a21;
+	--wood: #5a3d24;
+	--wood-light: #7a5533;
+	--wood-dark: #3f2a17;
+
+	/* Ink & text. */
+	--ink: #f7f1e3;
+	--ink-soft: #d9cdb4;
+	--ink-muted: #a99d83;
+
+	/* Brand: warm leaf green + harvest amber + sky. */
+	--green: #6bbf5a;
+	--green-dark: #4a8f3f;
+	--green-light: #a3e08a;
+	--amber: #f0b23c;
+	--amber-dark: #c8871f;
+	--clay: #e07a4a;
+	--sky: #6fb7e0;
+	--berry: #c95d7a;
+
+	/* Rarity palette. */
+	--r-common: #b9ad92;
+	--r-uncommon: #6bbf5a;
+	--r-rare: #5aa2e0;
+	--r-special: #b07fe0;
+	--r-quest: #f0b23c;
+
+	/* Stat colours. */
+	--hp: #e0575b;
+	--food: #e8973c;
+	--water: #5aa2e0;
+	--energy: #6bbf5a;
+
+	/* Rounded, tactile geometry. */
+	--radius-sm: 10px;
+	--radius: 16px;
+	--radius-lg: 22px;
+	--radius-pill: 999px;
+
+	/* Borders: a warm light hairline + a dark carve for depth. */
+	--border-warm: rgba(247, 241, 227, 0.16);
+	--border-strong: rgba(247, 241, 227, 0.28);
+	--carve: rgba(20, 12, 6, 0.5);
+
+	/* Soft, warm shadows. */
+	--shadow-panel: 0 18px 44px rgba(8, 18, 12, 0.55);
+	--shadow-soft: 0 6px 18px rgba(8, 18, 12, 0.4);
+	--shadow-inset: inset 0 2px 0 rgba(247, 241, 227, 0.08), inset 0 -3px 0 rgba(20, 12, 6, 0.35);
+
+	/* Spacing scale. */
+	--sp-1: 4px;
+	--sp-2: 8px;
+	--sp-3: 12px;
+	--sp-4: 16px;
+	--sp-5: 24px;
+	--sp-6: 32px;
+
 	color-scheme: dark;
 }
 
@@ -13,25 +92,163 @@ body {
 	padding: 0;
 	width: 100%;
 	height: 100%;
-	background: #0b1220;
-	color: #f7fafc;
+	background: var(--bg-deep);
+	color: var(--ink);
 	font-family: var(--font-ui);
 	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
 }
 
-/* Prevent pull-to-refresh / rubber-banding on the game surface only. */
+/* A soft vignette anchored to the top, like a storybook page. */
 body {
 	overscroll-behavior: none;
+	background:
+		radial-gradient(circle at 50% -10%, rgba(107, 191, 90, 0.18), transparent 55%),
+		radial-gradient(circle at 85% 110%, rgba(240, 178, 60, 0.12), transparent 50%), var(--bg-deep);
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--font-display);
+	font-weight: 800;
+	letter-spacing: 0.01em;
 }
 
 button,
-a {
+a,
+input,
+select,
+textarea {
 	font-family: inherit;
 }
 
+/* ── Shared component primitives ───────────────────────────────────── */
+
+/* The reassuring "wooden signpost" panel used by every dialog. */
+.u-panel {
+	background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+	border: 2px solid var(--wood-dark);
+	border-radius: var(--radius-lg);
+	box-shadow:
+		var(--shadow-panel),
+		inset 0 0 0 2px var(--border-warm);
+	color: var(--ink);
+}
+
+.u-title {
+	font-family: var(--font-display);
+	font-weight: 800;
+}
+
+/* A chunky, satisfying primary button (green "planted" look). */
+.u-btn {
+	appearance: none;
+	border: 2px solid var(--green-dark);
+	background: linear-gradient(180deg, var(--green-light), var(--green));
+	color: #16241d;
+	font-weight: 800;
+	border-radius: var(--radius-pill);
+	padding: 12px 22px;
+	cursor: pointer;
+	box-shadow:
+		0 4px 0 var(--green-dark),
+		0 6px 14px rgba(8, 18, 12, 0.4);
+	transition:
+		transform 0.08s ease,
+		box-shadow 0.08s ease,
+		filter 0.12s ease;
+}
+.u-btn:hover {
+	filter: brightness(1.06);
+}
+.u-btn:active {
+	transform: translateY(3px);
+	box-shadow:
+		0 1px 0 var(--green-dark),
+		0 3px 8px rgba(8, 18, 12, 0.4);
+}
+.u-btn:disabled {
+	cursor: not-allowed;
+	filter: grayscale(0.4) brightness(0.75);
+	box-shadow: 0 3px 0 var(--wood-dark);
+	transform: none;
+}
+
+/* Neutral / secondary raised button. */
+.u-btn-soft {
+	appearance: none;
+	border: 2px solid var(--wood-dark);
+	background: linear-gradient(180deg, var(--wood-light), var(--wood));
+	color: var(--ink);
+	font-weight: 700;
+	border-radius: var(--radius-pill);
+	padding: 11px 20px;
+	cursor: pointer;
+	box-shadow:
+		0 4px 0 var(--wood-dark),
+		0 6px 14px rgba(8, 18, 12, 0.35);
+	transition:
+		transform 0.08s ease,
+		box-shadow 0.08s ease,
+		filter 0.12s ease;
+}
+.u-btn-soft:hover {
+	filter: brightness(1.08);
+}
+.u-btn-soft:active {
+	transform: translateY(3px);
+	box-shadow: 0 1px 0 var(--wood-dark);
+}
+
+/* Modal scrim shared by every panel overlay. */
+.u-scrim {
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 50% 40%, rgba(8, 18, 12, 0.5), rgba(4, 8, 6, 0.78));
+	backdrop-filter: blur(2px);
+	display: grid;
+	place-items: center;
+	padding: var(--sp-4);
+	z-index: 50;
+}
+
+/* Thin wood-grain header strip for panel titles. */
+.u-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--sp-3);
+	padding-bottom: var(--sp-3);
+	margin-bottom: var(--sp-4);
+	border-bottom: 2px dashed rgba(247, 241, 227, 0.14);
+}
+.u-header h2 {
+	margin: 0;
+	font-size: 1.25rem;
+	color: var(--ink);
+	text-shadow: 0 2px 0 rgba(20, 12, 6, 0.4);
+}
+
 :focus-visible {
-	outline: 2px solid #68d391;
+	outline: 3px solid var(--amber);
 	outline-offset: 2px;
+	border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+::-webkit-scrollbar-track {
+	background: rgba(20, 12, 6, 0.3);
+	border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb {
+	background: var(--wood-light);
+	border: 3px solid transparent;
+	background-clip: content-box;
+	border-radius: var(--radius-pill);
 }
 
 @media (prefers-reduced-motion: reduce) {

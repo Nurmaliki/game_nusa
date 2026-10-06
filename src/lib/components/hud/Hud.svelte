@@ -59,27 +59,63 @@
 		}
 	}
 
+	const phaseLabel: Record<string, string> = {
+		midnight: 'Tengah Malam',
+		dawn: 'Fajar',
+		sunrise: 'Matahari Terbit',
+		morning: 'Pagi',
+		midday: 'Siang',
+		sunset: 'Senja',
+		night: 'Malam'
+	};
+
+	const phaseIcon: Record<string, string> = {
+		midnight: '🌙',
+		dawn: '🌅',
+		sunrise: '🌅',
+		morning: '🌤️',
+		midday: '☀️',
+		sunset: '🌇',
+		night: '🌙'
+	};
+
+	const weatherIcon: Record<string, string> = {
+		Cerah: '☀️',
+		Hujan: '🌧️',
+		Badai: '⛈️',
+		Berkabut: '🌫️',
+		Berangin: '🍃'
+	};
+
 	const bars = $derived([
-		{ label: 'HP', value: stats.health, max: 100, color: '#e53e3e' },
-		{ label: 'Food', value: stats.hunger, max: 100, color: '#dd6b20' },
-		{ label: 'Water', value: stats.thirst, max: 100, color: '#3182ce' },
-		{ label: 'Energy', value: stats.energy, max: 100, color: '#38a169' }
+		{ icon: '❤️', label: 'Darah', value: stats.health, max: 100, color: 'var(--hp)' },
+		{ icon: '🍗', label: 'Makan', value: stats.hunger, max: 100, color: 'var(--food)' },
+		{ icon: '💧', label: 'Air', value: stats.thirst, max: 100, color: 'var(--water)' },
+		{ icon: '⚡', label: 'Energi', value: stats.energy, max: 100, color: 'var(--energy)' }
 	]);
 </script>
 
 <div class="hud">
-	<div class="clock">
-		<span class="day">Day {time.day}</span>
-		<span class="time">{time.clock}</span>
-		<span class="phase">{time.phase}</span>
-		<span class="biome">{biomeName}</span>
-		<span class="weather" title="Cuaca">{weatherName}</span>
+	<div class="clock card">
+		<div class="row">
+			<span class="icon" aria-hidden="true">{phaseIcon[time.phase] ?? '🌤️'}</span>
+			<span class="time">{time.clock}</span>
+			<span class="day">Hari {time.day}</span>
+		</div>
+		<div class="chips">
+			<span class="chip phase">{phaseLabel[time.phase] ?? time.phase}</span>
+			<span class="chip biome">📍 {biomeName}</span>
+			<span class="chip weather"
+				>{weatherIcon[weatherName] ?? '☀️'}
+				{weatherName}</span
+			>
+		</div>
 	</div>
 
-	<div class="stats">
+	<div class="stats card">
 		{#each bars as bar (bar.label)}
 			<div class="bar" title="{bar.label}: {Math.round(bar.value)}/{bar.max}">
-				<span class="bar-label">{bar.label}</span>
+				<span class="bar-icon" aria-hidden="true">{bar.icon}</span>
 				<div class="bar-track">
 					<div
 						class="bar-fill"
@@ -89,6 +125,7 @@
 						)}%; background: {bar.color}"
 					></div>
 				</div>
+				<span class="bar-val">{Math.round(bar.value)}</span>
 			</div>
 		{/each}
 	</div>
@@ -99,74 +136,114 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
-		color: #f7fafc;
-		font-family: system-ui, sans-serif;
+		color: var(--ink);
+		font-family: var(--font-ui);
 		padding: 12px;
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
 	}
-	.clock {
-		background: rgba(11, 18, 32, 0.65);
-		border-radius: 8px;
+	.card {
+		background: linear-gradient(180deg, rgba(56, 81, 62, 0.92), rgba(43, 63, 48, 0.92));
+		border: 2px solid var(--wood-dark);
+		border-radius: var(--radius);
+		box-shadow:
+			var(--shadow-soft),
+			inset 0 0 0 2px var(--border-warm);
 		padding: 8px 12px;
-		display: flex;
-		gap: 10px;
-		align-items: baseline;
-		font-variant-numeric: tabular-nums;
+		backdrop-filter: blur(4px);
 	}
-	.day {
-		font-weight: 700;
+	.clock {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.icon {
+		font-size: 1.3rem;
+		line-height: 1;
 	}
 	.time {
-		font-size: 1.25rem;
+		font-family: var(--font-display);
+		font-size: 1.4rem;
+		font-weight: 800;
+		font-variant-numeric: tabular-nums;
+		text-shadow: 0 2px 0 rgba(20, 12, 6, 0.45);
+	}
+	.day {
+		font-size: 0.8rem;
 		font-weight: 700;
+		color: var(--amber);
+		background: rgba(240, 178, 60, 0.16);
+		border-radius: var(--radius-pill);
+		padding: 2px 10px;
 	}
-	.phase {
-		text-transform: capitalize;
-		opacity: 0.8;
-		font-size: 0.85rem;
+	.chips {
+		display: flex;
+		gap: 6px;
+		flex-wrap: wrap;
 	}
-	.biome {
-		font-size: 0.8rem;
-		padding-left: 10px;
-		margin-left: 4px;
-		border-left: 1px solid rgba(255, 255, 255, 0.2);
-		color: #68d391;
+	.chip {
+		font-size: 0.7rem;
+		font-weight: 600;
+		padding: 3px 9px;
+		border-radius: var(--radius-pill);
+		background: rgba(20, 12, 6, 0.35);
+		color: var(--ink-soft);
 	}
-	.weather {
-		font-size: 0.8rem;
-		padding-left: 10px;
-		margin-left: 4px;
-		border-left: 1px solid rgba(255, 255, 255, 0.2);
-		color: #90cdf4;
+	.chip.biome {
+		color: var(--green-light);
+	}
+	.chip.weather {
+		color: var(--sky);
 	}
 	.stats {
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
-		width: 180px;
+		gap: 6px;
+		width: 200px;
 	}
 	.bar {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 8px;
 	}
-	.bar-label {
-		font-size: 0.7rem;
-		width: 42px;
-		opacity: 0.9;
+	.bar-icon {
+		font-size: 0.85rem;
+		width: 18px;
+		text-align: center;
 	}
 	.bar-track {
 		flex: 1;
-		height: 10px;
-		background: rgba(0, 0, 0, 0.5);
-		border-radius: 5px;
+		height: 12px;
+		background: rgba(20, 12, 6, 0.55);
+		border-radius: var(--radius-pill);
 		overflow: hidden;
+		box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.5);
 	}
 	.bar-fill {
 		height: 100%;
-		border-radius: 5px;
-		transition: width 0.2s ease;
+		border-radius: var(--radius-pill);
+		transition: width 0.25s ease;
+		box-shadow: inset 0 2px 0 rgba(247, 241, 227, 0.35);
+	}
+	.bar-val {
+		font-size: 0.7rem;
+		font-variant-numeric: tabular-nums;
+		width: 24px;
+		text-align: right;
+		color: var(--ink-soft);
+	}
+	@media (max-width: 560px) {
+		.stats {
+			width: 150px;
+		}
+		.chips {
+			display: none;
+		}
 	}
 </style>

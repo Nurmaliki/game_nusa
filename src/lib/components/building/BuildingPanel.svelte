@@ -4,6 +4,7 @@
 	import { getItem } from '$data/items';
 	import { BUILDING_LIST } from '$data/buildings';
 	import { describePlacementIssues, type PlacementIssue } from '$game/building/placement';
+	import ItemIcon from '$lib/components/inventory/ItemIcon.svelte';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -65,6 +66,11 @@
 		return getItem(id)?.name ?? id;
 	}
 
+	function have(id: string): number {
+		void revision;
+		return session.state?.inventory.count(id) ?? 0;
+	}
+
 	function startBuild(id: string) {
 		open = false;
 		getGameBus().emit('BUILD_MODE_REQUEST', { definitionId: id });
@@ -72,25 +78,31 @@
 </script>
 
 {#if open}
-	<div class="overlay" role="dialog" aria-label="Bangunan">
-		<div class="panel">
-			<header>
-				<h2>Bangunan</h2>
+	<div class="u-scrim" role="dialog" aria-label="Bangunan">
+		<div class="panel u-panel">
+			<header class="u-header">
+				<h2>🏗️ Bangunan</h2>
 				<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
 			</header>
 			<ul class="buildings">
 				{#each buildings as def (def.id)}
 					{@const afford = canAfford(def.id)}
-					<li class="building">
+					<li class="building" class:ready={afford}>
 						<div class="info">
 							<span class="bname">{def.name}</span>
 							<span class="desc">{def.description}</span>
-							<span class="req">
-								{def.requires.map((r) => `${label(r.id)} ×${r.qty}`).join('  ·  ')}
-							</span>
-							<span class="size">{def.size.w}×{def.size.h}</span>
+							<ul class="req">
+								{#each def.requires as r (r.id)}
+									{@const owned = have(r.id)}
+									<li class:lack={owned < r.qty}>
+										<ItemIcon id={r.id} size={24} dim={owned < r.qty} />
+										<span>{owned}/{r.qty}</span>
+									</li>
+								{/each}
+							</ul>
+							<span class="size">Ukuran {def.size.w}×{def.size.h}</span>
 						</div>
-						<button class="place" disabled={!afford} onclick={() => startBuild(def.id)}>
+						<button class="u-btn-soft place" disabled={!afford} onclick={() => startBuild(def.id)}>
 							Bangun
 						</button>
 					</li>
@@ -102,10 +114,10 @@
 
 {#if inBuildMode}
 	<div class="build-hint" role="status">
-		Klik untuk menempatkan · R untuk memutar · Esc untuk batal
+		<span>🖱️ Klik untuk menempatkan · R untuk memutar · Esc untuk batal</span>
 		{#if preview.valid === false}
 			<span class="invalid">
-				Tidak bisa dibangun: {describePlacementIssues(preview.issues)}{preview.missing.length > 0
+				⚠️ Tidak bisa dibangun: {describePlacementIssues(preview.issues)}{preview.missing.length > 0
 					? ` (${preview.missing.map((m) => `${label(m.id)} kurang ${m.qty}`).join(', ')})`
 					: ''}
 			</span>
@@ -114,41 +126,21 @@
 {/if}
 
 <style>
-	.overlay {
-		position: absolute;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.55);
-		display: grid;
-		place-items: center;
-		z-index: 50;
-		padding: 16px;
-	}
 	.panel {
-		background: #141c2e;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 14px;
-		padding: 16px;
-		width: min(560px, 100%);
+		width: min(620px, 100%);
 		max-height: 90%;
 		overflow: auto;
-		color: #f7fafc;
-		font-family: var(--font-ui);
-	}
-	header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.15rem;
+		padding: 18px;
 	}
 	.close {
-		background: transparent;
-		border: none;
-		color: inherit;
-		font-size: 1.2rem;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
+		font-size: 1rem;
+		font-weight: 800;
 		cursor: pointer;
 	}
 	.buildings {
@@ -157,73 +149,80 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 10px;
 	}
 	.building {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		gap: 12px;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 10px;
-		padding: 10px 12px;
+		gap: 14px;
+		background: linear-gradient(180deg, rgba(247, 241, 227, 0.05), rgba(20, 12, 6, 0.2));
+		border: 2px solid var(--border-warm);
+		border-radius: var(--radius);
+		padding: 12px 14px;
+	}
+	.building.ready {
+		border-color: rgba(240, 178, 60, 0.5);
 	}
 	.info {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 4px;
 		min-width: 0;
 	}
 	.bname {
-		font-weight: 600;
+		font-family: var(--font-display);
+		font-weight: 800;
 	}
 	.desc {
-		font-size: 0.75rem;
-		opacity: 0.7;
+		font-size: 0.76rem;
+		color: var(--ink-soft);
 	}
 	.req {
-		font-size: 0.78rem;
-		opacity: 0.85;
+		list-style: none;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin: 4px 0;
+		padding: 0;
+	}
+	.req li {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.72rem;
+		font-weight: 700;
+	}
+	.req li.lack {
+		color: var(--clay);
 	}
 	.size {
 		font-size: 0.68rem;
-		opacity: 0.5;
+		color: var(--ink-muted);
 	}
 	.place {
 		flex-shrink: 0;
-		padding: 8px 14px;
-		border-radius: 8px;
-		border: 1px solid #b7791f;
-		background: #975a16;
-		color: #fff;
-		cursor: pointer;
-		font-family: inherit;
-	}
-	.place:disabled {
-		background: rgba(255, 255, 255, 0.06);
-		border-color: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.4);
-		cursor: not-allowed;
 	}
 	.build-hint {
 		position: absolute;
-		top: 56px;
+		top: 96px;
 		left: 50%;
 		transform: translateX(-50%);
-		background: rgba(11, 18, 32, 0.85);
-		border: 1px solid rgba(255, 255, 255, 0.18);
-		border-radius: 8px;
-		padding: 6px 12px;
-		color: #f7fafc;
+		background: linear-gradient(180deg, var(--panel-raised), var(--panel));
+		border: 2px solid var(--wood-dark);
+		border-radius: var(--radius);
+		padding: 8px 16px;
+		color: var(--ink);
 		font-family: var(--font-ui);
-		font-size: 0.78rem;
+		font-size: 0.8rem;
 		z-index: 30;
 		display: flex;
-		gap: 10px;
+		flex-direction: column;
 		align-items: center;
+		gap: 4px;
+		box-shadow: var(--shadow-soft);
 	}
 	.invalid {
-		color: #fc8181;
+		color: var(--clay);
 	}
 </style>

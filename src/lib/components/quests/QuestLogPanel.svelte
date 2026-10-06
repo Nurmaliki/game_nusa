@@ -2,7 +2,7 @@
 	import { getGameBus } from '$game/core/event-bus';
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { QUEST_LIST, getQuest } from '$data/quests';
-	import { getItem } from '$data/items';
+	import ItemIcon from '$lib/components/inventory/ItemIcon.svelte';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -58,18 +58,22 @@
 		}
 	}
 
-	function rewardText(def: (typeof QUEST_LIST)[number]): string {
-		return (def.rewards.items ?? [])
-			.map((i) => `${getItem(i.id)?.name ?? i.id} ×${i.qty}`)
-			.join(', ');
+	function rewards(def: (typeof QUEST_LIST)[number]): { id: string; qty: number }[] {
+		return def.rewards.items ?? [];
 	}
+
+	const STATUS_LABEL: Record<string, string> = {
+		ACTIVE: 'Berjalan',
+		COMPLETABLE: 'Siap diserahkan',
+		COMPLETED: 'Selesai'
+	};
 </script>
 
 {#if open}
-	<div class="overlay" role="dialog" aria-label="Misi">
-		<div class="panel">
-			<header>
-				<h2>Misi</h2>
+	<div class="u-scrim" role="dialog" aria-label="Misi">
+		<div class="panel u-panel">
+			<header class="u-header">
+				<h2>📜 Misi</h2>
 				<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
 			</header>
 			{#if rows.length === 0}
@@ -77,26 +81,33 @@
 			{/if}
 			<ul class="quests">
 				{#each rows as row (row.def.id)}
-					<li class="quest">
+					<li class="quest" class:done={row.state === 'COMPLETED'}>
 						<div class="head">
 							<span class="name">{row.def.name}</span>
-							<span class="status" class:done={row.state === 'COMPLETED'}>{row.state}</span>
+							<span class="status s-{row.state}">{STATUS_LABEL[row.state] ?? row.state}</span>
 						</div>
 						<p class="desc">{row.def.description}</p>
 						<ul class="objectives">
 							{#each row.objectives as obj (obj.id)}
 								<li class:done={obj.complete}>
-									{obj.complete ? '✓' : '•'}
-									{obj.description}
+									<span class="check">{obj.complete ? '✓' : '○'}</span>
+									<span>{obj.description}</span>
 									<span class="count">{obj.current}/{obj.count}</span>
 								</li>
 							{/each}
 						</ul>
-						{#if rewardText(row.def)}
-							<p class="reward">Hadiah: {rewardText(row.def)}</p>
+						{#if rewards(row.def).length}
+							<div class="reward">
+								<span class="rlabel">Hadiah</span>
+								{#each rewards(row.def) as r (r.id)}
+									<span class="ritem"><ItemIcon id={r.id} size={22} /> ×{r.qty}</span>
+								{/each}
+							</div>
 						{/if}
 						{#if row.state === 'COMPLETABLE'}
-							<button class="turnin" onclick={() => turnIn(row.def.id)}>Selesaikan</button>
+							<button class="u-btn turnin" onclick={() => turnIn(row.def.id)}>
+								Selesaikan Misi
+							</button>
 						{/if}
 					</li>
 				{/each}
@@ -106,45 +117,25 @@
 {/if}
 
 <style>
-	.overlay {
-		position: absolute;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.55);
-		display: grid;
-		place-items: center;
-		z-index: 50;
-		padding: 16px;
-	}
 	.panel {
-		background: #141c2e;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 14px;
-		padding: 16px;
-		width: min(560px, 100%);
+		width: min(600px, 100%);
 		max-height: 90%;
 		overflow: auto;
-		color: #f7fafc;
-		font-family: var(--font-ui);
-	}
-	header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.15rem;
+		padding: 18px;
 	}
 	.close {
-		background: transparent;
-		border: none;
-		color: inherit;
-		font-size: 1.2rem;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
+		font-size: 1rem;
+		font-weight: 800;
 		cursor: pointer;
 	}
 	.empty {
-		opacity: 0.7;
+		color: var(--ink-muted);
 	}
 	.quests {
 		list-style: none;
@@ -152,33 +143,47 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 12px;
 	}
 	.quest {
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 10px;
-		padding: 10px 12px;
+		background: linear-gradient(180deg, rgba(247, 241, 227, 0.05), rgba(20, 12, 6, 0.2));
+		border: 2px solid var(--border-warm);
+		border-left: 5px solid var(--amber);
+		border-radius: var(--radius);
+		padding: 12px 14px;
+	}
+	.quest.done {
+		border-left-color: var(--green);
 	}
 	.head {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 8px;
 	}
 	.name {
-		font-weight: 700;
+		font-family: var(--font-display);
+		font-weight: 800;
 	}
 	.status {
 		font-size: 0.68rem;
-		opacity: 0.6;
+		font-weight: 700;
+		padding: 2px 10px;
+		border-radius: var(--radius-pill);
+		background: rgba(20, 12, 6, 0.4);
+		color: var(--ink-soft);
 	}
-	.status.done {
-		color: #68d391;
+	.status.s-COMPLETABLE {
+		color: var(--amber);
+	}
+	.status.s-COMPLETED {
+		color: var(--green-light);
 	}
 	.desc {
-		font-size: 0.78rem;
-		opacity: 0.8;
-		margin: 4px 0 6px;
+		font-size: 0.8rem;
+		color: var(--ink-soft);
+		margin: 6px 0 8px;
+		line-height: 1.5;
 	}
 	.objectives {
 		list-style: none;
@@ -186,34 +191,50 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 4px;
 	}
 	.objectives li {
-		font-size: 0.76rem;
+		font-size: 0.78rem;
 		display: flex;
-		gap: 6px;
+		gap: 8px;
+		align-items: baseline;
 	}
 	.objectives li.done {
-		opacity: 0.5;
+		opacity: 0.55;
 		text-decoration: line-through;
+	}
+	.check {
+		color: var(--green-light);
+		font-weight: 800;
 	}
 	.count {
 		margin-left: auto;
-		opacity: 0.7;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink-muted);
 	}
 	.reward {
-		font-size: 0.72rem;
-		color: #f6ad55;
-		margin: 6px 0 0;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 10px;
+	}
+	.rlabel {
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--ink-muted);
+	}
+	.ritem {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.75rem;
+		font-weight: 700;
 	}
 	.turnin {
-		margin-top: 8px;
-		padding: 7px 14px;
-		border-radius: 8px;
-		border: 1px solid #388a69;
-		background: #2f855a;
-		color: #fff;
-		cursor: pointer;
-		font-family: inherit;
+		margin-top: 12px;
+		padding: 9px 18px;
+		font-size: 0.85rem;
 	}
 </style>

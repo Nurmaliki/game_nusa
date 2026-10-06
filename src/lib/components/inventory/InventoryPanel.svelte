@@ -2,6 +2,7 @@
 	import { getGameBus } from '$game/core/event-bus';
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { getItem } from '$data/items';
+	import ItemIcon from '$lib/components/inventory/ItemIcon.svelte';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -9,6 +10,8 @@
 	let session = getGameSession();
 	/** Index of the slot currently being dragged (for reorder / merge). */
 	let dragFrom = $state<number | null>(null);
+	/** Slot hovered/focused, drives the detail card. */
+	let selected = $state<number | null>(null);
 
 	$effect(() => {
 		const off = getGameBus().on('INVENTORY_CHANGED', (p) => (revision = p.revision));
@@ -21,6 +24,9 @@
 		if (!state) return [];
 		return state.inventory.toArray();
 	});
+
+	const selectedSlot = $derived(selected !== null ? (slots[selected] ?? null) : null);
+	const selectedDef = $derived(selectedSlot ? getItem(selectedSlot.id) : null);
 
 	function itemName(id: string): string {
 		return getItem(id)?.name ?? id;
@@ -73,42 +79,92 @@
 </script>
 
 {#if open}
-	<div class="overlay" role="dialog" aria-label="Inventaris">
-		<div class="panel">
-			<header>
-				<h2>Inventaris</h2>
+	<div class="u-scrim" role="dialog" aria-label="Inventaris">
+		<div class="panel u-panel">
+			<header class="u-header">
+				<h2>🎒 Inventaris</h2>
 				<div class="actions">
-					<button class="tidy" onclick={tidy} title="Kelompokkan item">Rapikan</button>
+					<button class="u-btn-soft tidy" onclick={tidy} title="Kelompokkan item">Rapikan</button>
 					<button class="close" onclick={() => (open = false)} aria-label="Tutup">✕</button>
 				</div>
 			</header>
-			<div class="grid">
-				{#each slots as slot, i (i)}
-					{@const def = slot ? getItem(slot.id) : null}
-					<button
-						class="slot {def?.rarity ?? ''} {dragFrom === i ? 'dragging' : ''} {slot
-							? 'filled'
-							: ''}"
-						disabled={!slot && dragFrom === null}
-						draggable={!!slot}
-						title={slot ? `${itemName(slot.id)} (${slot.qty})` : 'Kosong'}
-						ondragstart={() => onDragStart(i)}
-						ondragover={(e) => e.preventDefault()}
-						ondrop={() => moveTo(i)}
-						ondragend={() => (dragFrom = null)}
-						onclick={() => (dragFrom === null ? consume(i) : moveTo(i))}
-					>
-						{#if slot}
-							<span class="icon" aria-hidden="true"></span>
-							<span class="qty">{slot.qty > 1 ? slot.qty : ''}</span>
-							<span class="name">{itemName(slot.id)}</span>
-							{#if slot.durability !== undefined}
-								<span class="dur">{slot.durability}</span>
+
+			<div class="body">
+				<div class="grid">
+					{#each slots as slot, i (i)}
+						{@const def = slot ? getItem(slot.id) : null}
+						<button
+							class="slot {def?.rarity ?? ''} {dragFrom === i ? 'dragging' : ''} {slot
+								? 'filled'
+								: ''}"
+							class:selected={selected === i}
+							disabled={!slot && dragFrom === null}
+							draggable={!!slot}
+							title={slot ? `${itemName(slot.id)} (${slot.qty})` : 'Kosong'}
+							ondragstart={() => onDragStart(i)}
+							ondragover={(e) => e.preventDefault()}
+							ondrop={() => moveTo(i)}
+							ondragend={() => (dragFrom = null)}
+							onmouseenter={() => (selected = i)}
+							onfocus={() => (selected = i)}
+							onclick={() => (dragFrom === null ? consume(i) : moveTo(i))}
+						>
+							{#if slot}
+								<ItemIcon id={slot.id} size={34} />
+								<span class="qty">{slot.qty > 1 ? slot.qty : ''}</span>
+								<span class="name">{itemName(slot.id)}</span>
+								{#if slot.durability !== undefined}
+									<span class="dur">{slot.durability}</span>
+								{/if}
 							{/if}
-						{/if}
-					</button>
-				{/each}
+						</button>
+					{/each}
+				</div>
+
+				<aside class="detail">
+					{#if selectedDef && selectedSlot}
+						<div class="detail-head">
+							<ItemIcon id={selectedSlot.id} size={48} />
+							<div>
+								<span class="dname">{selectedDef.name}</span>
+								<span class="dmeta">{selectedDef.category} · {selectedDef.rarity}</span>
+							</div>
+						</div>
+						<p class="ddesc">{selectedDef.description}</p>
+						<dl class="dstats">
+							<div>
+								<dt>Jumlah</dt>
+								<dd>{selectedSlot.qty}/{selectedDef.stackSize}</dd>
+							</div>
+							<div>
+								<dt>Bobot</dt>
+								<dd>{selectedDef.weight}</dd>
+							</div>
+							<div>
+								<dt>Nilai</dt>
+								<dd>🪙 {selectedDef.sellValue}</dd>
+							</div>
+							{#if selectedSlot.durability !== undefined}
+								<div>
+									<dt>Daya tahan</dt>
+									<dd>{selectedSlot.durability}</dd>
+								</div>
+							{/if}
+							{#if selectedDef.effects}
+								{#each Object.entries(selectedDef.effects) as [k, v] (k)}
+									<div>
+										<dt>{k}</dt>
+										<dd class="pos">+{v}</dd>
+									</div>
+								{/each}
+							{/if}
+						</dl>
+					{:else}
+						<p class="empty">Pilih item untuk melihat detail.</p>
+					{/if}
+				</aside>
 			</div>
+
 			<p class="hint">
 				Seret untuk menata/menggabungkan item. Klik makanan/obat untuk menggunakannya.
 			</p>
@@ -117,35 +173,11 @@
 {/if}
 
 <style>
-	.overlay {
-		position: absolute;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.55);
-		display: grid;
-		place-items: center;
-		z-index: 50;
-		padding: 16px;
-	}
 	.panel {
-		background: #141c2e;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		border-radius: 14px;
-		padding: 16px;
-		width: min(560px, 100%);
+		width: min(760px, 100%);
 		max-height: 90%;
 		overflow: auto;
-		color: #f7fafc;
-		font-family: var(--font-ui);
-	}
-	header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12px;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.15rem;
+		padding: 18px;
 	}
 	.actions {
 		display: flex;
@@ -153,98 +185,173 @@
 		gap: 8px;
 	}
 	.tidy {
-		background: rgba(56, 178, 172, 0.18);
-		border: 1px solid rgba(56, 178, 172, 0.5);
-		color: #81e6d9;
-		border-radius: 8px;
-		padding: 4px 10px;
-		font-size: 0.75rem;
-		font-family: inherit;
-		cursor: pointer;
-	}
-	.tidy:hover {
-		background: rgba(56, 178, 172, 0.3);
+		padding: 6px 14px;
+		font-size: 0.78rem;
 	}
 	.close {
-		background: transparent;
-		border: none;
-		color: inherit;
-		font-size: 1.2rem;
+		width: 34px;
+		height: 34px;
+		border-radius: var(--radius-pill);
+		border: 2px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
+		font-size: 1rem;
+		font-weight: 800;
 		cursor: pointer;
+	}
+	.body {
+		display: grid;
+		grid-template-columns: 1fr 240px;
+		gap: 16px;
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
 		gap: 8px;
+		align-content: start;
 	}
 	.slot {
 		position: relative;
 		aspect-ratio: 1;
-		border-radius: 10px;
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		background: rgba(255, 255, 255, 0.04);
+		border-radius: var(--radius);
+		border: 2px solid var(--border-warm);
+		background: linear-gradient(180deg, rgba(20, 12, 6, 0.22), rgba(20, 12, 6, 0.4));
 		color: inherit;
 		cursor: pointer;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 2px;
+		gap: 3px;
 		padding: 4px;
 		font-family: inherit;
+		transition:
+			transform 0.08s ease,
+			border-color 0.12s ease;
 	}
 	.slot:disabled {
 		cursor: default;
-		opacity: 0.5;
+		opacity: 0.4;
 	}
 	.slot.filled {
 		cursor: grab;
+	}
+	.slot.filled:hover,
+	.slot.selected {
+		border-color: var(--amber);
+		transform: translateY(-2px);
 	}
 	.slot.dragging {
 		opacity: 0.4;
 		border-style: dashed;
 	}
 	.slot.uncommon {
-		border-color: #38a169;
+		border-color: var(--r-uncommon);
 	}
 	.slot.rare {
-		border-color: #3182ce;
+		border-color: var(--r-rare);
 	}
 	.slot.special {
-		border-color: #805ad5;
+		border-color: var(--r-special);
 	}
 	.slot.quest {
-		border-color: #d69e2e;
-	}
-	.icon {
-		width: 22px;
-		height: 22px;
-		border-radius: 4px;
-		background: #38a169;
+		border-color: var(--r-quest);
 	}
 	.qty {
 		position: absolute;
-		top: 2px;
-		right: 4px;
-		font-size: 0.7rem;
-		font-weight: 700;
+		top: 3px;
+		right: 5px;
+		font-size: 0.72rem;
+		font-weight: 800;
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 	}
 	.dur {
 		position: absolute;
-		bottom: 2px;
-		right: 4px;
-		font-size: 0.65rem;
-		color: #f6ad55;
+		bottom: 3px;
+		right: 5px;
+		font-size: 0.62rem;
+		font-weight: 700;
+		color: var(--amber);
 	}
 	.name {
-		font-size: 0.62rem;
-		line-height: 1.1;
+		font-size: 0.6rem;
+		line-height: 1.05;
 		text-align: center;
-		opacity: 0.9;
+		opacity: 0.92;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.detail {
+		background: var(--panel-inset);
+		border: 2px solid var(--border-warm);
+		border-radius: var(--radius);
+		padding: 14px;
+	}
+	.detail-head {
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		margin-bottom: 10px;
+	}
+	.dname {
+		display: block;
+		font-family: var(--font-display);
+		font-weight: 800;
+		font-size: 1.05rem;
+	}
+	.dmeta {
+		font-size: 0.72rem;
+		text-transform: capitalize;
+		color: var(--ink-muted);
+	}
+	.ddesc {
+		font-size: 0.8rem;
+		line-height: 1.5;
+		color: var(--ink-soft);
+		margin: 0 0 12px;
+	}
+	.dstats {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+	.dstats > div {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.76rem;
+	}
+	.dstats dt {
+		color: var(--ink-muted);
+		text-transform: capitalize;
+	}
+	.dstats dd {
+		margin: 0;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+	.dstats dd.pos {
+		color: var(--green-light);
+	}
+	.empty {
+		font-size: 0.8rem;
+		color: var(--ink-muted);
+		text-align: center;
+		margin: 24px 0;
 	}
 	.hint {
-		margin: 12px 0 0;
+		margin: 14px 0 0;
 		font-size: 0.75rem;
-		opacity: 0.65;
+		color: var(--ink-muted);
+	}
+	@media (max-width: 620px) {
+		.body {
+			grid-template-columns: 1fr;
+		}
+		.detail {
+			order: -1;
+		}
 	}
 </style>

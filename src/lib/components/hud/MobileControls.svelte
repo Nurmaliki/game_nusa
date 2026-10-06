@@ -153,8 +153,9 @@
 		position: absolute;
 		inset: 24px;
 		border-radius: 50%;
-		background: rgba(11, 18, 32, 0.4);
-		border: 2px solid rgba(255, 255, 255, 0.2);
+		background: radial-gradient(circle at 40% 30%, rgba(56, 81, 62, 0.6), rgba(20, 12, 6, 0.5));
+		border: 3px solid var(--wood-dark);
+		box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.45);
 	}
 	.stick {
 		position: absolute;
@@ -164,8 +165,9 @@
 		height: 56px;
 		margin: -28px 0 0 -28px;
 		border-radius: 50%;
-		background: rgba(104, 211, 145, 0.55);
-		border: 2px solid rgba(255, 255, 255, 0.4);
+		background: radial-gradient(circle at 35% 30%, var(--green-light), var(--green-dark));
+		border: 3px solid var(--wood-dark);
+		box-shadow: 0 4px 8px rgba(8, 18, 12, 0.5);
 		transition: transform 0.05s linear;
 	}
 	.actions {
@@ -181,22 +183,25 @@
 		width: 56px;
 		height: 56px;
 		border-radius: 50%;
-		border: 2px solid rgba(255, 255, 255, 0.25);
-		background: rgba(11, 18, 32, 0.5);
-		color: #f7fafc;
+		border: 3px solid var(--wood-dark);
+		background: linear-gradient(180deg, var(--wood-light), var(--wood));
+		color: var(--ink);
 		font-size: 1.3rem;
 		display: grid;
 		place-items: center;
 		touch-action: none;
 		cursor: pointer;
+		box-shadow: 0 3px 0 var(--wood-dark);
 	}
 	.btn:active {
-		background: rgba(104, 211, 145, 0.4);
+		transform: translateY(2px);
+		box-shadow: 0 1px 0 var(--wood-dark);
+		filter: brightness(1.1);
 	}
 	.btn.attack {
-		background: rgba(197, 48, 48, 0.4);
+		background: linear-gradient(180deg, #e88a86, #c05753);
 	}
 	.btn.heavy {
-		background: rgba(214, 158, 46, 0.4);
+		background: linear-gradient(180deg, var(--amber), var(--amber-dark));
 	}
 </style>
