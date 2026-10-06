@@ -190,6 +190,75 @@ export class ChunkRenderer {
 			}
 		}
 
+		// Pass 5 — wildflower clusters: small petalled daisies that add the cozy
+		// splash of colour of a farm-life meadow. Seeded from a coarse world cell
+		// so they tile seamlessly and stay sparse (never a carpet).
+		const flowerCell = tile * 4;
+		const fc0 = Math.floor(originX / flowerCell);
+		const fr0 = Math.floor(originY / flowerCell);
+		const fc1 = Math.ceil((originX + size) / flowerCell);
+		const fr1 = Math.ceil((originY + size) / flowerCell);
+		const palette = [0xf4e07a, 0xf0a6c0, 0xa8d8f0, 0xf28d7a];
+		for (let fi = fr0; fi < fr1; fi++) {
+			for (let fj = fc0; fj < fc1; fj++) {
+				let fh = (Math.imul(fj, 0x2545f491) ^ Math.imul(fi, 0x9e3779b1)) >>> 0;
+				fh = (fh ^ (fh >>> 15)) >>> 0;
+				// ~1 in 3 cells gets a little clump of 2–4 blossoms.
+				if (fh % 3 !== 0) continue;
+				const jx = ((fh >>> 3) & 0xff) / 255;
+				const jy = ((fh >>> 11) & 0xff) / 255;
+				const cx = (fj + jx) * flowerCell - originX;
+				const cy = (fi + jy) * flowerCell - originY;
+				const count = 2 + ((fh >>> 19) & 0x3);
+				for (let b = 0; b < count; b++) {
+					const bh = (fh >>> (b * 5 + 2)) & 0x3f;
+					const bx = cx + ((bh % 13) - 6) * 2;
+					const by = cy + (((bh >>> 2) % 11) - 5) * 2;
+					const petal = palette[bh % palette.length];
+					// A soft shadow, a green stem, then a bright 5-pixel bloom.
+					g.fillStyle(0x000000, 0.14);
+					g.fillEllipse(bx, by + 2, 6, 2.5);
+					g.fillStyle(0x3f7a3a, 0.9);
+					g.fillRect(bx, by, 1, 3);
+					g.fillStyle(petal, 0.95);
+					g.fillRect(bx - 2, by - 1, 5, 3);
+					g.fillRect(bx - 1, by - 2, 3, 5);
+					g.fillStyle(0xfff6d8, 1);
+					g.fillRect(bx - 1, by - 1, 3, 3);
+					g.fillStyle(0xf0b23c, 1);
+					g.fillRect(bx, by, 1, 1);
+				}
+			}
+		}
+
+		// Pass 6 — pebbles / twigs: occasional tiny props that give the ground
+		// tactile variation without competing with resource sprites.
+		const pebbleCell = tile * 5;
+		const pc0 = Math.floor(originX / pebbleCell);
+		const pr0 = Math.floor(originY / pebbleCell);
+		const pc1 = Math.ceil((originX + size) / pebbleCell);
+		const pr1 = Math.ceil((originY + size) / pebbleCell);
+		for (let pi = pr0; pi < pr1; pi++) {
+			for (let pj = pc0; pj < pc1; pj++) {
+				let ph = (Math.imul(pj, 0x27d4eb2f) ^ Math.imul(pi, 0x165667b1)) >>> 0;
+				ph = (ph ^ (ph >>> 13)) >>> 0;
+				if (ph % 2 !== 0) continue;
+				const jx = ((ph >>> 5) & 0xff) / 255;
+				const jy = ((ph >>> 13) & 0xff) / 255;
+				const px = (pj + jx) * pebbleCell - originX;
+				const py = (pi + jy) * pebbleCell - originY;
+				const base = this.manager.groundTintAt(originX + px, originY + py);
+				const grey = this.mixColor(base, 0x8a8578, 0.7);
+				const dark = this.mixColor(grey, 0x000000, 0.35);
+				g.fillStyle(0x000000, 0.16);
+				g.fillEllipse(px, py + 2, 7, 2.6);
+				g.fillStyle(dark, 1);
+				g.fillEllipse(px, py, 6, 4);
+				g.fillStyle(grey, 1);
+				g.fillEllipse(px - 0.5, py - 0.5, 4, 2.6);
+			}
+		}
+
 		// Bake to a static texture, then drop the graphics. The texture key is
 		// unique per chunk so re-entering a chunk reuses the same layout.
 		//

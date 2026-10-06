@@ -142,6 +142,8 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
+		/* Above the top bar so the stat bars are never covered by its buttons. */
+		z-index: 22;
 	}
 	.card {
 		background: linear-gradient(180deg, rgba(56, 81, 62, 0.92), rgba(43, 63, 48, 0.92));

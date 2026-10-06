@@ -10,6 +10,8 @@
 	import ChapterCompleteOverlay from '$lib/components/hud/ChapterCompleteOverlay.svelte';
 	import MobileControls from '$lib/components/hud/MobileControls.svelte';
 	import RotateHint from '$lib/components/hud/RotateHint.svelte';
+	import Minimap from '$lib/components/hud/Minimap.svelte';
+	import MapPanel from '$lib/components/hud/MapPanel.svelte';
 	import InteractionPrompt from '$lib/components/hud/InteractionPrompt.svelte';
 	import InventoryPanel from '$lib/components/inventory/InventoryPanel.svelte';
 	import CraftingPanel from '$lib/components/crafting/CraftingPanel.svelte';
@@ -34,6 +36,7 @@
 	let questsOpen = $state(false);
 	let skillsOpen = $state(false);
 	let achievementsOpen = $state(false);
+	let mapOpen = $state(false);
 	let toast = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
 	let muted = $state(false);
@@ -45,7 +48,13 @@
 	);
 	// Any open panel suspends on-screen movement so the player doesn't drift.
 	const anyPanelOpen = $derived(
-		inventoryOpen || craftingOpen || buildingOpen || questsOpen || skillsOpen || achievementsOpen
+		inventoryOpen ||
+			craftingOpen ||
+			buildingOpen ||
+			questsOpen ||
+			skillsOpen ||
+			achievementsOpen ||
+			mapOpen
 	);
 
 	onMount(() => {
@@ -211,6 +220,10 @@
 			achievementsOpen = !achievementsOpen;
 			playUiClick();
 			e.preventDefault();
+		} else if (e.key === 'm' || e.key === 'M') {
+			mapOpen = !mapOpen;
+			playUiClick();
+			e.preventDefault();
 		} else if (e.key === 'Escape') {
 			inventoryOpen = false;
 			craftingOpen = false;
@@ -218,6 +231,7 @@
 			questsOpen = false;
 			skillsOpen = false;
 			achievementsOpen = false;
+			mapOpen = false;
 			e.preventDefault();
 		}
 	}
@@ -252,6 +266,7 @@
 <div class="play" class:touch={showTouch}>
 	<GameCanvas />
 	<Hud />
+	<Minimap corner={showTouch ? 'tr' : 'bl'} />
 	<Hotbar />
 	<DeathOverlay />
 	<DamageFlash />
@@ -334,6 +349,16 @@
 		>
 			P · Pencapaian
 		</button>
+		<button
+			class:active={mapOpen}
+			onclick={() => {
+				mapOpen = !mapOpen;
+				playUiClick();
+			}}
+			aria-keyshortcuts="m"
+		>
+			M · Peta
+		</button>
 	</div>
 
 	{#if toast}
@@ -346,6 +371,7 @@
 	<QuestLogPanel bind:open={questsOpen} />
 	<SkillsPanel bind:open={skillsOpen} />
 	<AchievementsPanel bind:open={achievementsOpen} />
+	<MapPanel bind:open={mapOpen} />
 
 	{#if errorMsg}
 		<div class="error-overlay">
@@ -372,7 +398,9 @@
 	}
 	.play.touch .topbar {
 		top: max(12px, env(safe-area-inset-top));
+		left: auto;
 		right: max(12px, env(safe-area-inset-right));
+		transform: none;
 	}
 	.play.touch .topbar button {
 		padding: 10px 14px;
@@ -380,7 +408,8 @@
 	.topbar {
 		position: absolute;
 		top: 12px;
-		right: 12px;
+		left: 50%;
+		transform: translateX(-50%);
 		z-index: 20;
 		display: flex;
 		gap: 8px;
@@ -417,9 +446,10 @@
 		z-index: 20;
 		display: flex;
 		gap: 8px;
-		flex-wrap: wrap;
+		flex-wrap: wrap-reverse;
 		justify-content: flex-end;
-		max-width: 42vw;
+		align-items: flex-end;
+		max-width: 62vw;
 	}
 	.controls button {
 		font-size: 0.8rem;
@@ -432,7 +462,7 @@
 	}
 	.toast {
 		position: absolute;
-		bottom: 108px;
+		bottom: 124px;
 		left: 50%;
 		transform: translateX(-50%);
 		background: linear-gradient(180deg, var(--panel-raised), var(--panel));
