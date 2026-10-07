@@ -382,17 +382,17 @@ exports[`sprite painters > matches the recorded fingerprints (regression guard) 
   },
   "sprite_npc": {
     "bbox": [
-      7,
-      3,
-      25,
-      32.1,
+      5,
+      4,
+      27,
+      49.5375,
     ],
     "circles": 0,
-    "digest": "34f5063d",
+    "digest": "bd83e556",
     "lines": 0,
-    "ops": 17,
+    "ops": 29,
     "polys": 0,
-    "rects": 17,
+    "rects": 29,
   },
   "sprite_obsidian_rock": {
     "bbox": [
@@ -452,17 +452,17 @@ exports[`sprite painters > matches the recorded fingerprints (regression guard) 
   },
   "sprite_player": {
     "bbox": [
-      6.139867028167306,
-      3,
-      25.860132971832694,
-      33.1,
+      5,
+      4,
+      27,
+      49.5375,
     ],
     "circles": 0,
-    "digest": "ceb65e79",
+    "digest": "2f97fb40",
     "lines": 0,
-    "ops": 31,
+    "ops": 49,
     "polys": 0,
-    "rects": 31,
+    "rects": 49,
   },
   "sprite_rare_plant": {
     "bbox": [

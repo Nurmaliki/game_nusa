@@ -22,7 +22,8 @@ export class Player {
 		this.sprite.setOrigin(0.5, 0.85);
 		this.sprite.setDepth(10);
 		const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-		// Feet-centred body so Y-sorting pivots on the ground contact point.
+		// Feet-centred body so Y-sorting pivots on the ground contact point. The
+		// hitbox stays a small circle at the feet regardless of the taller art.
 		body.setCircle(
 			BALANCE.player.bodyRadius,
 			this.sprite.width * 0.5 - BALANCE.player.bodyRadius,

@@ -210,10 +210,11 @@ export class WorldScene extends Phaser.Scene {
 
 	/**
 	 * Set the camera zoom for the current viewport so the player keeps a
-	 * consistent apparent size at every resolution (see §6 / §35). The zoom is
-	 * derived from the viewport height against a target visible-world height,
-	 * then clamped — so a 1080p monitor zooms in rather than showing a huge sea
-	 * of ground with a tiny avatar. Round-pixels keep the art crisp.
+	 * consistent apparent size at every resolution (see §6 / §35), while keeping
+	 * the pixel art CRISP: the zoom is snapped to a value that maps world pixels
+	 * onto whole device pixels as closely as possible. A fractional zoom (e.g.
+	 * 1.53) makes every sprite shimmer/blur; rounding to quarter-steps keeps the
+	 * character sharp without visible size jumps between screens.
 	 */
 	private applyCameraZoom(): void {
 		const h = this.scale.height;
@@ -226,6 +227,9 @@ export class WorldScene extends Phaser.Scene {
 		// environment stays navigable.
 		if (minEdge <= BALANCE.camera.smallViewportMax) zoom = Math.min(zoom, 1.3);
 		zoom = Math.max(zoomMin, Math.min(zoomMax, zoom));
+		// Snap to 1/4 steps so pixel scaling stays near-integer (crisp, no shimmer)
+		// while still adapting smoothly enough across common screen sizes.
+		zoom = Math.round(zoom * 4) / 4;
 		cam.setZoom(zoom);
 		cam.setRoundPixels(true);
 	}
@@ -274,11 +278,13 @@ export class WorldScene extends Phaser.Scene {
 		state.player.position = this.player.position;
 		// Y-sort the player among world objects so tall sprites overlap correctly.
 		this.player.sprite.setDepth(this.player.position.y);
-		// A tiny idle "breath" (scale only — never touches the physics body).
-		// Skipped under reduced motion.
+		// NOTE: no sprite scaling/bobbing for the player. A fractional "breath"
+		// scale (1.0±0.02) blurred the pixel art under the camera zoom, and moving
+		// the sprite would drag its physics body. The player stays pixel-crisp and
+		// rock-steady; ambient life comes from the world around it (§5 / §15).
+		this.player.sprite.setScale(1, 1);
+
 		const moving = (this.player.sprite.body as Phaser.Physics.Arcade.Body).speed > 4;
-		const breath = moving || settingsStore.reducedMotion ? 1 : 1 + Math.sin(time / 420) * 0.02;
-		this.player.sprite.setScale(1, breath);
 
 		// First-session tutorial: the move step completes on the first step taken.
 		if (moving && !this.emittedMoveSignal) {
