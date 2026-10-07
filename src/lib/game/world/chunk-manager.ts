@@ -193,18 +193,9 @@ export class ChunkManager {
 		// BALANCE tunable so the island can be made busier/sparser without code.
 		const { nodeDensityMin, nodeDensityMax } = BALANCE.world;
 		const count = nodeDensityMin + Math.floor(rng() * (nodeDensityMax - nodeDensityMin + 1));
-		const occupied: { x: number; y: number }[] = [];
-		let attempts = 0;
-		let placed = 0;
-		while (placed < count && attempts < count * 25) {
-			attempts++;
-			const x = originX + 40 + rng() * (chunkPx - 80);
-			const y = originY + 40 + rng() * (chunkPx - 80);
-			if (occupied.some((p) => Math.hypot(p.x - x, p.y - y) < BALANCE.world.nodeMinSpacing))
-				continue;
-			occupied.push({ x, y });
 
-			// Weighted pick.
+		// Weighted pick helper (deterministic: consumes exactly one rng value).
+		const pickType = (): string => {
 			let roll = rng() * total;
 			let picked = types[0];
 			for (const t of types) {
@@ -214,15 +205,82 @@ export class ChunkManager {
 					break;
 				}
 			}
-			if (!getResourceNode(picked)) continue;
+			return picked;
+		};
+
+		// --- Cluster-based placement (see §31 map composition) -----------------
+		// Uniform scatter reads as "icons sprinkled on a green canvas". Instead we
+		// grow a few CLUSTERS per chunk and place most nodes inside them, leaving
+		// deliberate open clearings between. This is what makes the island feel
+		// like a living forest rather than noise. Deterministic given the seed.
+		//
+		// A cluster is same-type vegetation (a grove, a bamboo stand, a rock
+		// outcrop). ~30% of the budget is reserved for lone "scattered" props so
+		// clearings still have the odd tree.
+		const occupied: { x: number; y: number }[] = [];
+		const clusterCount =
+			BALANCE.world.clusterCountMin +
+			Math.floor(rng() * (BALANCE.world.clusterCountMax - BALANCE.world.clusterCountMin + 1));
+		const clusters: { x: number; y: number; typeId: string; radius: number }[] = [];
+		for (let c = 0; c < clusterCount; c++) {
+			const cx = originX + 48 + rng() * (chunkPx - 96);
+			const cy = originY + 48 + rng() * (chunkPx - 96);
+			clusters.push({
+				x: cx,
+				y: cy,
+				typeId: pickType(),
+				radius:
+					BALANCE.world.clusterRadiusMin +
+					rng() * (BALANCE.world.clusterRadiusMax - BALANCE.world.clusterRadiusMin)
+			});
+		}
+
+		let placed = 0;
+		const pushNode = (x: number, y: number, typeId: string): boolean => {
+			if (!getResourceNode(typeId)) return false;
+			if (occupied.some((p) => Math.hypot(p.x - x, p.y - y) < BALANCE.world.nodeMinSpacing))
+				return false;
+			occupied.push({ x, y });
 			nodes.push({
-				instanceId: `${picked}_${coord.cx}_${coord.cy}_${placed}`,
-				nodeTypeId: picked,
+				instanceId: `${typeId}_${coord.cx}_${coord.cy}_${placed}`,
+				nodeTypeId: typeId,
 				x,
 				y,
 				biome: biome.id
 			});
 			placed++;
+			return true;
+		};
+
+		// Stage 1 — fill the clusters (most of the budget).
+		const clusterBudget = Math.max(0, Math.round(count * BALANCE.world.clusterShare));
+		for (const cl of clusters) {
+			const want =
+				BALANCE.world.clusterSizeMin +
+				Math.floor(rng() * (BALANCE.world.clusterSizeMax - BALANCE.world.clusterSizeMin + 1));
+			let got = 0;
+			let tries = 0;
+			while (got < want && placed < clusterBudget && tries < want * 12) {
+				tries++;
+				const a = rng() * Math.PI * 2;
+				const r = Math.sqrt(rng()) * cl.radius;
+				const x = cl.x + Math.cos(a) * r;
+				const y = cl.y + Math.sin(a) * r;
+				const cx2 = originX + 32;
+				const cy2 = originY + 32;
+				if (x < cx2 || y < cy2 || x > originX + chunkPx - 32 || y > originY + chunkPx - 32)
+					continue;
+				if (pushNode(x, y, cl.typeId)) got++;
+			}
+		}
+
+		// Stage 2 — scattered loners fill the remaining budget in the clearings.
+		let attempts2 = 0;
+		while (placed < count && attempts2 < count * 25) {
+			attempts2++;
+			const x = originX + 40 + rng() * (chunkPx - 80);
+			const y = originY + 40 + rng() * (chunkPx - 80);
+			pushNode(x, y, pickType());
 		}
 
 		const data: ChunkData = { coord, biome, nodes, seed };

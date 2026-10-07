@@ -79,6 +79,55 @@ describe('ChunkManager chunk generation determinism', () => {
 	});
 });
 
+describe('ChunkManager node clustering (see §31)', () => {
+	it('places nodes in clusters: some nodes sit close, most are not isolated', () => {
+		const cm = new ChunkManager(SEED);
+		// Scan several chunks and measure each node's nearest neighbour distance.
+		let clustered = 0;
+		let total = 0;
+		for (let cy = 3; cy < 7; cy++) {
+			for (let cx = 3; cx < 7; cx++) {
+				const nodes = cm.getChunk({ cx, cy }).nodes;
+				for (let i = 0; i < nodes.length; i++) {
+					let nearest = Infinity;
+					for (let j = 0; j < nodes.length; j++) {
+						if (i === j) continue;
+						nearest = Math.min(
+							nearest,
+							Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y)
+						);
+					}
+					if (nodes.length > 1) {
+						total++;
+						// A clustered node has a close sibling (well under the
+						// 52px spacing floor is impossible, so use 2.5× spacing).
+						if (nearest < BALANCE.world.nodeMinSpacing * 2.5) clustered++;
+					}
+				}
+			}
+		}
+		// With clustering, a clear majority of nodes have a near neighbour.
+		expect(clustered / total).toBeGreaterThan(0.5);
+	});
+
+	it('respects the minimum spacing between nodes', () => {
+		const cm = new ChunkManager(SEED);
+		const nodes = cm.getChunk({ cx: 4, cy: 4 }).nodes;
+		for (let i = 0; i < nodes.length; i++) {
+			for (let j = i + 1; j < nodes.length; j++) {
+				const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
+				expect(d).toBeGreaterThanOrEqual(BALANCE.world.nodeMinSpacing);
+			}
+		}
+	});
+
+	it('stays deterministic with clustering', () => {
+		const a = new ChunkManager(SEED);
+		const b = new ChunkManager(SEED);
+		expect(a.getChunk({ cx: 9, cy: 2 }).nodes).toEqual(b.getChunk({ cx: 9, cy: 2 }).nodes);
+	});
+});
+
 describe('ChunkManager active radius', () => {
 	it('activates the chunks around the player', () => {
 		const cm = new ChunkManager(SEED);

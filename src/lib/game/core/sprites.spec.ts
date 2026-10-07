@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { creatureTexture, resourceTexture, SPRITE_KEYS } from './sprite-keys';
+import { creatureTexture, buildingTexture, resourceTexture, SPRITE_KEYS } from './sprite-keys';
 import { RESOURCE_NODE_LIST } from '$data/resources';
 import { CREATURE_LIST } from '$data/creatures';
+import { BUILDING_LIST } from '$data/buildings';
 
 /**
  * Guards the data -> sprite-key mapping. The renderers fall back to a generic
@@ -48,5 +49,29 @@ describe('creatureTexture', () => {
 
 	it('falls back to a monkey for unknown creatures', () => {
 		expect(creatureTexture('does_not_exist')).toBe(SPRITE_KEYS.monkey);
+	});
+});
+
+describe('buildingTexture', () => {
+	it('maps every shipped building to a distinct, non-fallback sprite key', () => {
+		for (const b of BUILDING_LIST) {
+			const key = buildingTexture(b.id);
+			// The generic storage sprite is the documented fallback; no real
+			// building should silently fall through to it unless it maps there.
+			const expectedFallback = b.id === 'storage' || b.id === 'storage_chest';
+			if (!expectedFallback) {
+				expect(key, `building "${b.id}" falls back to the storage sprite`).not.toBe(
+					SPRITE_KEYS.storage
+				);
+			}
+		}
+	});
+
+	it('gives the campfire its dedicated sprite', () => {
+		expect(buildingTexture('campfire')).toBe(SPRITE_KEYS.campfire);
+	});
+
+	it('falls back to the generic storage sprite for unknown buildings', () => {
+		expect(buildingTexture('does_not_exist')).toBe(SPRITE_KEYS.storage);
 	});
 });

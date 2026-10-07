@@ -27,6 +27,8 @@ export interface BuildingDefinition {
 	behaviour?: string;
 	/** Unlock gate: only buildable once this is satisfied. */
 	unlock?: { skill?: { id: string; level: number } };
+	/** Override the default build time (ms). 0 = raises instantly. */
+	buildMs?: number;
 }
 
 export const BUILDINGS: Record<string, BuildingDefinition> = {
@@ -42,7 +44,9 @@ export const BUILDINGS: Record<string, BuildingDefinition> = {
 		],
 		solid: false,
 		station: 'campfire',
-		behaviour: 'fire'
+		behaviour: 'fire',
+		// The tutorial's first build: quick enough to feel rewarding immediately.
+		buildMs: 2000
 	},
 	shelter: {
 		id: 'shelter',

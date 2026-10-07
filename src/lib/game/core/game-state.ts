@@ -59,6 +59,10 @@ export interface BuildingInstance {
 	position: Vec2;
 	rotation: number;
 	state: Record<string, unknown>;
+	/** Total build time in ms (0 = instant). */
+	buildMs?: number;
+	/** Elapsed build time in ms; build is complete when >= buildMs. */
+	buildElapsedMs?: number;
 }
 
 /**
@@ -410,7 +414,12 @@ export class GameState {
 
 	/** Crafting station ids reachable from the player's current position. */
 	reachableStations(): Set<string> {
-		return reachableStations(this.buildings as PlacedBuilding[], this.player.position);
+		return reachableStations(this.completedBuildings(), this.player.position);
+	}
+
+	/** Placed buildings that finished construction (usable stations/anchors). */
+	private completedBuildings(): PlacedBuilding[] {
+		return this.buildings.filter((b) => this.isBuildingComplete(b)) as PlacedBuilding[];
 	}
 
 	// ── Quests & NPCs ────────────────────────────────────────────────────
@@ -530,17 +539,45 @@ export class GameState {
 	): Result<BuildingInstance, string> {
 		const removed = this.inventory.removeAll(requires);
 		if (!removed.ok) return err('insufficient materials');
+		const def = getBuilding(defId);
+		const buildMs = def?.buildMs ?? BALANCE.building.buildDurationMs;
 		const instance: BuildingInstance = {
 			id: `b_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e6).toString(36)}`,
 			definitionId: defId,
 			position,
 			rotation: 0,
-			state: {}
+			state: {},
+			buildMs,
+			buildElapsedMs: 0
 		};
 		this.buildings.push(instance);
 		this.statistics.buildingsBuilt += 1;
 		this.refreshQuests();
 		return ok(instance);
+	}
+
+	/** True once a placed building has finished raising. */
+	isBuildingComplete(b: BuildingInstance): boolean {
+		return (b.buildElapsedMs ?? 0) >= (b.buildMs ?? 0);
+	}
+
+	/**
+	 * Advance construction of every in-progress building by `deltaMs`. Returns
+	 * the ids that FINISHED on this tick so the scene can swap scaffold ->
+	 * finished sprite and play a completion cue. Pure arithmetic; no engine deps.
+	 */
+	advanceConstruction(deltaMs: number): BuildingInstance[] {
+		const finished: BuildingInstance[] = [];
+		for (const b of this.buildings) {
+			const total = b.buildMs ?? 0;
+			if (total <= 0) continue;
+			const elapsed = b.buildElapsedMs ?? 0;
+			if (elapsed >= total) continue;
+			const next = Math.min(total, elapsed + deltaMs);
+			b.buildElapsedMs = next;
+			if (next >= total) finished.push(b);
+		}
+		return finished;
 	}
 
 	/** Remove a placed building by id, returning its definition (for refunds). */
@@ -615,8 +652,8 @@ export class GameState {
 	respawn(): void {
 		this.stats = respawnStats();
 		this.player.isDead = false;
-		// Prefer the placed respawn anchor (bed/shelter/house).
-		const anchor = nearestRespawnAnchor(this.buildings as PlacedBuilding[]);
+		// Prefer the placed respawn anchor (bed/shelter/house) — completed only.
+		const anchor = nearestRespawnAnchor(this.completedBuildings());
 		if (anchor) this.player.position = anchor;
 		this.syncPlayerFromStats();
 	}

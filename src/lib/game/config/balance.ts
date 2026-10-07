@@ -89,7 +89,13 @@ export const BALANCE = {
 
 	building: {
 		placementRange: 120,
-		minSpacingToResource: 48
+		minSpacingToResource: 48,
+		/**
+		 * Default time to raise a structure once placed (ms). Buildings may
+		 * override via their definition; while building, a scaffold + progress
+		 * bar is shown instead of the finished sprite.
+		 */
+		buildDurationMs: 3000
 	},
 
 	xp: {
@@ -119,7 +125,10 @@ export const BALANCE = {
 		particleSpeed: 60,
 		/** Idle "bob" applied to living sprites (px amplitude + period). */
 		idleBobPx: 1.5,
-		idleBobPeriodMs: 1400
+		idleBobPeriodMs: 1400,
+		/** Wind sway for vegetation (peak degrees + period) (see §19). */
+		swayAmpDeg: 1.4,
+		swayPeriodMs: 3200
 	},
 
 	weather: {
@@ -155,10 +164,23 @@ export const BALANCE = {
 		coastLineFactor: 0.32,
 		rainforestFactor: 0.34,
 		/** Resource nodes placed per chunk (inclusive range), deterministic. */
-		nodeDensityMin: 14,
-		nodeDensityMax: 20,
+		nodeDensityMin: 18,
+		nodeDensityMax: 26,
 		/** Minimum world-pixel spacing enforced between nodes in a chunk. */
 		nodeMinSpacing: 52,
+		/**
+		 * Clustering (see §31). Nodes are grown in a few same-type clusters to
+		 * read as groves/stands/outcrops with open clearings between, instead of
+		 * an even scatter. `clusterShare` = fraction of the node budget that is
+		 * forced into clusters; the rest is placed as lone props in clearings.
+		 */
+		clusterCountMin: 2,
+		clusterCountMax: 4,
+		clusterRadiusMin: 60,
+		clusterRadiusMax: 130,
+		clusterSizeMin: 3,
+		clusterSizeMax: 6,
+		clusterShare: 0.7,
 		/**
 		 * Per-node-type sprite scale. Landmark props (trees, rocks, ore) are
 		 * drawn at ~1.5 tiles tall so the island reads as populated rather than
@@ -167,22 +189,34 @@ export const BALANCE = {
 		 */
 		nodeSpriteScale: {
 			default: 1,
-			tree: 1.5,
-			palm: 1.5,
-			hardwood_tree: 1.6,
-			pine: 1.5,
-			bamboo_grove: 1.4,
-			rock: 1.25,
-			iron_vein: 1.3,
-			gold_vein: 1.3,
-			ruin_cache: 1.2,
-			clay_mound: 1.2
+			tree: 1.8,
+			palm: 1.8,
+			hardwood_tree: 1.9,
+			pine: 1.8,
+			bamboo_grove: 1.6,
+			rock: 1.35,
+			iron_vein: 1.4,
+			gold_vein: 1.4,
+			ruin_cache: 1.25,
+			clay_mound: 1.25
 		} as Record<string, number>
 	},
 
 	camera: {
 		followLerp: 0.12,
-		shakeIntensity: 0.006
+		shakeIntensity: 0.006,
+		/**
+		 * Camera zoom is derived from the viewport so the player occupies a
+		 * consistent fraction of the screen at every size (see §6 / §35): on a
+		 * big monitor a fixed zoom made everything look tiny. The visible world
+		 * height is held near `targetViewHeightPx`, then clamped to a sane band.
+		 * Round-pixels keep the pixel art crisp at fractional zooms.
+		 */
+		targetViewHeightPx: 470,
+		zoomMin: 1.35,
+		zoomMax: 2.6,
+		/** Minimum viewport edge (px) below which the world shows more (mobile). */
+		smallViewportMax: 480
 	},
 
 	save: {

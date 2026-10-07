@@ -69,6 +69,10 @@ export interface BuildingSave {
 	rotation: number;
 	/** Generic per-building state (e.g. storage contents, fire fuel). */
 	state: Record<string, unknown>;
+	/** Total build time in ms (0/absent = instant). */
+	buildMs?: number;
+	/** Elapsed build time in ms; complete when >= buildMs. */
+	buildElapsedMs?: number;
 }
 
 export interface QuestSave {

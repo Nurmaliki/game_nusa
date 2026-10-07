@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ball, ellipse, mix, paint, poly, rect, shade, vgrad } from './art';
+import { ball, ellipse, mix, paint, poly, rect, scatter, shade, tuft, vgrad } from './art';
 import { SPRITE_KEYS, resourceTexture, creatureTexture } from './sprite-keys';
 
 export { SPRITE_KEYS, resourceTexture, creatureTexture };
@@ -17,22 +17,24 @@ export { SPRITE_KEYS, resourceTexture, creatureTexture };
  */
 
 // ── Palette ────────────────────────────────────────────────────────────
-const GRASS = 0x3f7d4f;
-const GRASS_DARK = 0x2f5f3a;
-const SAND = 0xd8c48a;
-const SAND_DARK = 0xb8a06a;
-const ROCK = 0x8a93a6;
-const ROCK_DARK = 0x5a6375;
-const WOOD = 0x6b4a2f;
-const WOOD_DARK = 0x4a3220;
-const LEAF = 0x3f9d4f;
-const LEAF_DARK = 0x2c7339;
-const LEAF_LIGHT = 0x66c46f;
-const WATER = 0x2c7bb5;
-const WATER_LIGHT = 0x57a9dd;
-const SKIN = 0xe0b088;
-const CLOTH = 0x3b7dd8;
-const CLOTH_DARK = 0x2a5aa0;
+// A warmer, slightly desaturated palette in the spirit of cozy farm-life
+// games: sun-baked greens, honeyed sand, weathered stone and rich brown wood.
+const GRASS = 0x5c9e57;
+const GRASS_DARK = 0x417a3e;
+const SAND = 0xe0c98f;
+const SAND_DARK = 0xbfa066;
+const ROCK = 0x93919f;
+const ROCK_DARK = 0x63606f;
+const WOOD = 0x8a5a34;
+const WOOD_DARK = 0x5a3a1e;
+const LEAF = 0x55a24a;
+const LEAF_DARK = 0x367037;
+const LEAF_LIGHT = 0x86cf6f;
+const WATER = 0x3aa0c8;
+const WATER_LIGHT = 0x74c6e4;
+const SKIN = 0xecc096;
+const CLOTH = 0x4f86d6;
+const CLOTH_DARK = 0x35598f;
 
 // ── Ground tiles (32×32) ───────────────────────────────────────────────
 
@@ -42,10 +44,14 @@ function grassTile(g: Phaser.GameObjects.Graphics, base: number, accent: number)
 	// Flat base with scattered blades — NO vertical gradient (a per-tile gradient
 	// tiles into visible horizontal bands).
 	rect(g, 0, 0, TILE, TILE, base);
-	// A few darker patches for organic variation.
-	ellipse(g, 8, 10, 6, 4, shade(base, 0.9), 0.5);
-	ellipse(g, 24, 22, 7, 5, shade(base, 0.92), 0.45);
-	ellipse(g, 18, 5, 5, 3, shade(base, 1.06), 0.4);
+	// Very subtle organic blotches, kept low-contrast so tiles don't read as
+	// obviously repeated squares on the ground.
+	ellipse(g, 8, 10, 6, 4, shade(base, 0.95), 0.28);
+	ellipse(g, 24, 22, 7, 5, shade(base, 0.96), 0.24);
+	ellipse(g, 18, 5, 5, 3, shade(base, 1.04), 0.22);
+	// Fine pixel speckle for a hand-drawn meadow feel (deterministic, subtle).
+	scatter(g, 0, 0, TILE, TILE, 16, shade(base, 0.93), 7, 0.35);
+	scatter(g, 0, 0, TILE, TILE, 12, shade(base, 1.06), 13, 0.3);
 	// Scattered blades of grass.
 	const blades: [number, number][] = [
 		[5, 8],
@@ -55,18 +61,25 @@ function grassTile(g: Phaser.GameObjects.Graphics, base: number, accent: number)
 		[27, 25],
 		[8, 27],
 		[20, 29],
-		[14, 13]
+		[14, 13],
+		[29, 4],
+		[3, 17]
 	];
-	for (const [x, y] of blades) {
-		rect(g, x, y, 1, 4, accent);
-		rect(g, x + 1, y + 1, 1, 3, shade(accent, 1.15));
-	}
+	for (const [x, y] of blades) tuft(g, x, y, 4, accent);
+	// A couple of tiny flowers add a cozy splash of colour.
+	rect(g, 25, 9, 1, 3, shade(accent, 1.2));
+	ball(g, 25, 8, 1, 0xf3e07a);
+	rect(g, 6, 21, 1, 3, shade(accent, 1.2));
+	ball(g, 6, 20, 1, 0xf0b6c8);
 }
 
 function sandTile(g: Phaser.GameObjects.Graphics, base: number, accent: number): void {
 	rect(g, 0, 0, TILE, TILE, base);
 	ellipse(g, 10, 12, 6, 4, shade(base, 0.94), 0.5);
 	ellipse(g, 24, 20, 7, 5, shade(base, 1.05), 0.4);
+	// Fine pebbly grain.
+	scatter(g, 0, 0, TILE, TILE, 26, shade(base, 0.9), 5, 0.55);
+	scatter(g, 0, 0, TILE, TILE, 16, shade(base, 1.08), 11, 0.5, 2);
 	const specks: [number, number][] = [
 		[4, 6],
 		[13, 4],
@@ -79,16 +92,20 @@ function sandTile(g: Phaser.GameObjects.Graphics, base: number, accent: number):
 	];
 	for (const [x, y] of specks) rect(g, x, y, 2, 2, accent);
 	// A couple of ripple lines.
-	rect(g, 3, 12, 9, 1, shade(base, 0.88));
-	rect(g, 20, 22, 8, 1, shade(base, 0.88));
+	rect(g, 3, 12, 9, 1, shade(base, 0.86));
+	rect(g, 20, 22, 8, 1, shade(base, 0.86));
+	rect(g, 15, 8, 6, 1, shade(base, 1.1));
 }
 
 function rockTile(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 0, 0, TILE, TILE, ROCK_DARK);
 	ellipse(g, 12, 12, 8, 6, shade(ROCK_DARK, 1.14), 0.6);
 	ellipse(g, 24, 22, 8, 6, shade(ROCK_DARK, 0.9), 0.5);
+	// Grain speckle for a rough stone surface.
+	scatter(g, 0, 0, TILE, TILE, 24, shade(ROCK_DARK, 0.82), 3, 0.5);
+	scatter(g, 0, 0, TILE, TILE, 16, shade(ROCK_DARK, 1.2), 9, 0.4);
 	// Cracks + faceted chunks.
-	g.lineStyle(1, shade(ROCK_DARK, 0.82), 1);
+	g.lineStyle(1, shade(ROCK_DARK, 0.78), 1);
 	g.strokeRect(2, 2, 12, 11);
 	g.strokeRect(16, 4, 13, 10);
 	g.strokeRect(6, 17, 20, 12);
@@ -100,21 +117,33 @@ function rockTile(g: Phaser.GameObjects.Graphics): void {
 // ── Trees ──────────────────────────────────────────────────────────────
 
 function broadleafTree(g: Phaser.GameObjects.Graphics, leaf: number): void {
-	// Trunk.
+	// Trunk with bark texture.
 	rect(g, 22, 30, 5, 16, WOOD);
-	rect(g, 22, 30, 2, 16, shade(WOOD, 1.18));
+	rect(g, 22, 30, 2, 16, shade(WOOD, 1.2));
 	rect(g, 26, 30, 1, 16, WOOD_DARK);
+	rect(g, 24, 33, 1, 3, WOOD_DARK);
+	rect(g, 24, 40, 1, 3, WOOD_DARK);
 	// Root flare.
 	rect(g, 19, 44, 11, 3, WOOD_DARK);
-	// Layered canopy: dark base, mid, light highlight.
-	ball(g, 24, 22, 16, shade(leaf, 0.82));
-	ball(g, 18, 26, 11, shade(leaf, 0.95));
-	ball(g, 31, 26, 11, shade(leaf, 0.95));
-	ball(g, 24, 16, 11, leaf);
-	ball(g, 24, 13, 7, shade(leaf, 1.15));
-	rect(g, 21, 9, 3, 3, shade(leaf, 1.3));
+	rect(g, 18, 45, 13, 2, shade(WOOD_DARK, 0.85));
+	// Layered canopy: dark base, mid, light highlight — richer for depth.
+	ball(g, 24, 22, 17, shade(leaf, 0.78));
+	ball(g, 18, 26, 11, shade(leaf, 0.92));
+	ball(g, 31, 26, 11, shade(leaf, 0.92));
+	ball(g, 24, 15, 13, shade(leaf, 0.95));
+	ball(g, 24, 12, 8, leaf);
+	ball(g, 19, 14, 6, shade(leaf, 1.08));
+	ball(g, 29, 16, 6, shade(leaf, 1.05));
+	ball(g, 24, 10, 4, shade(leaf, 1.2));
+	// Leafy dapple dabs.
+	scatter(g, 12, 6, 26, 26, 14, shade(leaf, 1.25), 21, 0.5, 2);
+	scatter(g, 12, 8, 26, 24, 12, shade(leaf, 0.72), 33, 0.4, 2);
+	rect(g, 21, 8, 3, 3, shade(leaf, 1.32));
+	// A little fruit/cluster for color.
+	ball(g, 15, 18, 2, 0xd8534e);
+	ball(g, 33, 21, 2, 0xd8534e);
 	// shadow under canopy
-	ellipse(g, 24, 34, 12, 3, 0x000000, 0.14);
+	ellipse(g, 24, 34, 13, 3, 0x000000, 0.16);
 }
 
 function pineTree(g: Phaser.GameObjects.Graphics, leaf: number): void {
@@ -153,7 +182,7 @@ function pineTree(g: Phaser.GameObjects.Graphics, leaf: number): void {
 }
 
 function palmTree(g: Phaser.GameObjects.Graphics): void {
-	// Curved trunk built from stacked blocks.
+	// Curved trunk built from stacked blocks with ring texture.
 	const trunk: [number, number][] = [
 		[22, 44],
 		[23, 40],
@@ -165,9 +194,12 @@ function palmTree(g: Phaser.GameObjects.Graphics): void {
 	];
 	for (const [x, y] of trunk) {
 		rect(g, x, y, 5, 5, WOOD);
-		rect(g, x, y, 2, 5, shade(WOOD, 1.18));
+		rect(g, x, y, 2, 5, shade(WOOD, 1.2));
+		rect(g, x + 4, y, 1, 5, WOOD_DARK);
+		// Ring notch across the trunk segment.
+		rect(g, x, y + 4, 5, 1, shade(WOOD, 0.72));
 	}
-	// Fronds radiating from the crown.
+	// Fronds radiating from the crown (dark backing then the lit layer).
 	const cx = 30;
 	const cy = 18;
 	const fronds: [number, number][][] = [
@@ -206,13 +238,29 @@ function palmTree(g: Phaser.GameObjects.Graphics): void {
 		poly(g, f as [number, number][], LEAF_DARK);
 	}
 	for (const f of fronds) {
-		const mid: [number, number][] = f.map(([x, y]) => [x, y] as [number, number]);
+		// Inset the lit layer by 1px for a rimmed leaf.
+		const mid: [number, number][] = f.map(([x, y], i) =>
+			i === 0 ? ([x, y] as [number, number]) : ([x - Math.sign(x - cx), y] as [number, number])
+		);
 		poly(g, mid, LEAF);
 	}
-	// Coconuts.
+	// A light catch on the top frond.
+	poly(
+		g,
+		[
+			[cx, cy - 1],
+			[cx + 5, cy - 12],
+			[cx + 8, cy - 12],
+			[cx + 3, cy - 1]
+		],
+		shade(LEAF, 1.2)
+	);
+	// Coconuts clustered at the crown.
 	ball(g, 28, 21, 3, 0x5a3b22);
 	ball(g, 33, 22, 3, 0x6b4a2f);
-	ellipse(g, 26, 46, 12, 3, 0x000000, 0.16);
+	ball(g, 30, 24, 3, 0x4a3220);
+	ball(g, 28, 22, 1, 0x7d5a3a);
+	ellipse(g, 26, 46, 13, 3, 0x000000, 0.16);
 }
 
 function bambooGrove(g: Phaser.GameObjects.Graphics): void {
@@ -253,21 +301,30 @@ function bambooGrove(g: Phaser.GameObjects.Graphics): void {
 // ── Bushes & ground plants ─────────────────────────────────────────────
 
 function bush(g: Phaser.GameObjects.Graphics, withBerries: boolean): void {
-	ball(g, 14, 18, 9, LEAF_DARK);
-	ball(g, 26, 18, 9, LEAF_DARK);
-	ball(g, 20, 14, 10, LEAF);
-	ball(g, 20, 12, 6, LEAF_LIGHT);
+	// Dark under-layer for weight.
+	ball(g, 14, 19, 9, shade(LEAF_DARK, 0.85));
+	ball(g, 26, 19, 9, shade(LEAF_DARK, 0.85));
+	ball(g, 20, 16, 10, LEAF_DARK);
+	ball(g, 20, 13, 8, LEAF);
+	ball(g, 16, 14, 5, shade(LEAF, 1.1));
+	ball(g, 25, 15, 5, shade(LEAF, 1.05));
+	ball(g, 20, 11, 4, LEAF_LIGHT);
+	// Leafy speckle.
+	scatter(g, 10, 8, 20, 16, 10, shade(LEAF, 0.7), 17, 0.45, 2);
 	if (withBerries) {
 		for (const [x, y] of [
 			[13, 16],
 			[24, 15],
 			[19, 22],
-			[28, 20]
-		]) {
-			ball(g, x, y, 2, 0xd6483f);
+			[28, 20],
+			[17, 12],
+			[26, 11]
+		] as [number, number][]) {
+			ball(g, x, y, 2, 0xcf4a58);
+			ball(g, x - 1, y - 1, 1, 0xf07a86);
 		}
 	}
-	ellipse(g, 20, 28, 12, 3, 0x000000, 0.14);
+	ellipse(g, 20, 28, 12, 3, 0x000000, 0.16);
 }
 
 function herbPatch(g: Phaser.GameObjects.Graphics): void {
@@ -644,6 +701,8 @@ function bird(g: Phaser.GameObjects.Graphics, body: number, wing: number): void 
 
 function boar(g: Phaser.GameObjects.Graphics): void {
 	const fur = 0x6b4a34;
+	// Contact shadow so the animal reads as standing on the ground.
+	ellipse(g, 24, 37, 16, 4, 0x000000, 0.2);
 	ellipse(g, 22, 22, 15, 10, fur); // body
 	ellipse(g, 36, 20, 8, 8, shade(fur, 1.08)); // head
 	poly(
@@ -675,6 +734,8 @@ function boar(g: Phaser.GameObjects.Graphics): void {
 function monkey(g: Phaser.GameObjects.Graphics): void {
 	const fur = 0x8a5a33;
 	const face = 0xd9a679;
+	// Contact shadow.
+	ellipse(g, 20, 34, 11, 3.5, 0x000000, 0.2);
 	ball(g, 20, 24, 11, fur); // body
 	ball(g, 20, 14, 7, fur); // head
 	ball(g, 20, 15, 5, face); // face patch
@@ -690,6 +751,8 @@ function monkey(g: Phaser.GameObjects.Graphics): void {
 
 function snake(g: Phaser.GameObjects.Graphics): void {
 	const green = 0x4caf50;
+	// Contact shadow hugging the wavy body.
+	ellipse(g, 23, 25, 15, 6, 0x000000, 0.16);
 	// Wavy body from stacked segments.
 	const path: [number, number][] = [
 		[10, 30],
@@ -709,6 +772,8 @@ function snake(g: Phaser.GameObjects.Graphics): void {
 
 function tiger(g: Phaser.GameObjects.Graphics): void {
 	const orange = 0xe08a2b;
+	// Contact shadow.
+	ellipse(g, 26, 39, 18, 4, 0x000000, 0.2);
 	ellipse(g, 24, 24, 17, 11, orange); // body
 	ellipse(g, 40, 21, 9, 9, shade(orange, 1.05)); // head
 	// Ears.
@@ -741,6 +806,8 @@ function tiger(g: Phaser.GameObjects.Graphics): void {
 
 function crocodile(g: Phaser.GameObjects.Graphics): void {
 	const green = 0x4f7d3a;
+	// Contact shadow.
+	ellipse(g, 24, 32, 20, 4, 0x000000, 0.18);
 	// Long flat body.
 	ellipse(g, 22, 26, 18, 8, green);
 	ellipse(g, 22, 22, 16, 6, shade(green, 1.12));
@@ -777,6 +844,8 @@ function crocodile(g: Phaser.GameObjects.Graphics): void {
 
 function wolf(g: Phaser.GameObjects.Graphics): void {
 	const grey = 0x8b93a4;
+	// Contact shadow.
+	ellipse(g, 24, 37, 16, 4, 0x000000, 0.2);
 	ellipse(g, 22, 24, 15, 10, grey); // body
 	ellipse(g, 37, 22, 8, 8, shade(grey, 1.06)); // head
 	poly(
@@ -824,6 +893,8 @@ function wolf(g: Phaser.GameObjects.Graphics): void {
 function komodo(g: Phaser.GameObjects.Graphics): void {
 	const body = 0x5a6b3a;
 	const dark = 0x3f4d2a;
+	// Contact shadow.
+	ellipse(g, 28, 33, 20, 4, 0x000000, 0.18);
 	ellipse(g, 26, 26, 17, 9, body); // torso
 	// Long heavy tail.
 	poly(
@@ -902,26 +973,41 @@ function fish(g: Phaser.GameObjects.Graphics): void {
 // ── Player & NPC ───────────────────────────────────────────────────────
 
 function player(g: Phaser.GameObjects.Graphics): void {
-	// Shadow.
-	ellipse(g, 16, 28, 9, 3, 0x000000, 0.22);
-	// Legs.
-	rect(g, 12, 22, 3, 7, 0x2b3a55);
-	rect(g, 17, 22, 3, 7, 0x2b3a55);
-	// Torso.
+	// Soft ground shadow.
+	ellipse(g, 16, 29, 10, 3, 0x000000, 0.24);
+	// Legs / trousers.
+	rect(g, 12, 22, 3, 7, 0x2f4160);
+	rect(g, 17, 22, 3, 7, 0x2f4160);
+	// Boots.
+	rect(g, 12, 27, 3, 3, 0x4a3220);
+	rect(g, 17, 27, 3, 3, 0x4a3220);
+	// Torso with a warm shirt + shading + a strap.
 	vgrad(g, 10, 12, 12, 12, CLOTH, CLOTH_DARK);
-	rect(g, 10, 12, 4, 12, shade(CLOTH, 1.15));
-	// Arms.
+	rect(g, 10, 12, 4, 12, shade(CLOTH, 1.16));
+	rect(g, 10, 20, 12, 2, shade(CLOTH, 0.78));
+	// A little sash/strap across the chest.
+	rect(g, 20, 12, 2, 10, 0xd9a441);
+	// Arms (skin) with sleeves.
 	rect(g, 7, 14, 3, 9, SKIN);
 	rect(g, 22, 14, 3, 9, SKIN);
+	rect(g, 7, 14, 3, 3, CLOTH_DARK);
+	rect(g, 22, 14, 3, 3, CLOTH_DARK);
 	// Head.
 	rect(g, 11, 3, 10, 9, SKIN);
-	rect(g, 11, 3, 10, 3, 0x3a2a1a); // hair
-	rect(g, 11, 3, 3, 5, 0x3a2a1a);
-	// Face hint.
-	rect(g, 18, 8, 2, 2, 0x3a2a1a);
-	rect(g, 13, 8, 2, 2, 0x3a2a1a);
-	// Belt.
+	rect(g, 11, 9, 10, 3, shade(SKIN, 0.9));
+	// Hair (dark, with a lighter fringe highlight).
+	rect(g, 11, 3, 10, 3, 0x3a2a1a);
+	rect(g, 11, 3, 3, 6, 0x3a2a1a);
+	rect(g, 19, 4, 2, 4, 0x3a2a1a);
+	rect(g, 14, 3, 4, 1, 0x5a4326);
+	// Face: eyes + a friendly blush.
+	rect(g, 13, 7, 1, 2, 0x2a2118);
+	rect(g, 18, 7, 1, 2, 0x2a2118);
+	rect(g, 12, 9, 2, 1, 0xe8a087);
+	rect(g, 18, 9, 2, 1, 0xe8a087);
+	// Belt buckle.
 	rect(g, 10, 21, 12, 2, 0x6b4a2f);
+	rect(g, 15, 21, 2, 2, 0xd9a441);
 }
 
 function npc(g: Phaser.GameObjects.Graphics, cloth: number, skin: number): void {
@@ -938,8 +1024,549 @@ function npc(g: Phaser.GameObjects.Graphics, cloth: number, skin: number): void 
 	rect(g, 10, 21, 12, 2, shade(cloth, 0.55));
 }
 
-// ── Public painters ────────────────────────────────────────────────────
+// ── Structures (placed buildings) ──────────────────────────────────────
 
+/**
+ * A campfire: ring of stones around crossed logs with a layered flame and
+ * glowing embers. Drawn at 48×48 so the fire reads clearly at world scale.
+ */
+function campfire(g: Phaser.GameObjects.Graphics): void {
+	// Ground shadow.
+	ellipse(g, 24, 40, 20, 6, 0x000000, 0.18);
+	// Stone ring (clustered pebbles around the pit).
+	const stones: [number, number, number][] = [
+		[8, 34, 4],
+		[15, 39, 4],
+		[24, 41, 4],
+		[33, 39, 4],
+		[40, 34, 4],
+		[11, 29, 3],
+		[37, 29, 3]
+	];
+	for (const [x, y, r] of stones) {
+		ball(g, x, y, r, 0x8a93a6);
+		ball(g, x, y - 1, r - 1, 0xa3abbc);
+	}
+	// Ash bed inside the ring.
+	ellipse(g, 24, 34, 12, 4, 0x2b2620);
+	ellipse(g, 24, 33, 9, 3, 0x3a332a);
+	// Crossed logs.
+	rect(g, 12, 30, 24, 4, WOOD);
+	rect(g, 12, 30, 24, 1, shade(WOOD, 1.25));
+	g.lineStyle(2, WOOD_DARK, 1);
+	g.lineBetween(16, 27, 32, 36);
+	g.lineBetween(32, 27, 16, 36);
+	// Embers glowing between the logs.
+	for (const [x, y] of [
+		[20, 32],
+		[28, 32],
+		[24, 33]
+	] as [number, number][]) {
+		ball(g, x, y, 1.5, 0xf6ad55);
+	}
+	// Flame: dark base, mid orange, bright core (onion layers).
+	poly(
+		g,
+		[
+			[24, 8],
+			[32, 22],
+			[28, 30],
+			[20, 30],
+			[16, 22]
+		],
+		0xc05621
+	);
+	poly(
+		g,
+		[
+			[24, 12],
+			[30, 23],
+			[27, 29],
+			[21, 29],
+			[18, 23]
+		],
+		0xed8936
+	);
+	poly(
+		g,
+		[
+			[24, 17],
+			[28, 24],
+			[26, 28],
+			[22, 28],
+			[20, 24]
+		],
+		0xf6ad55
+	);
+	poly(
+		g,
+		[
+			[24, 21],
+			[26, 25],
+			[24, 27],
+			[22, 25]
+		],
+		0xfee9a3
+	);
+	// A couple of drifting sparks.
+	ball(g, 19, 12, 1, 0xfbd38d);
+	ball(g, 29, 9, 1, 0xfbd38d);
+}
+
+/** A small thatch shelter: hut frame with a peaked roof. */
+function shelter(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 42, 22, 6, 0x000000, 0.18);
+	// Walls.
+	rect(g, 10, 26, 28, 16, SAND_DARK);
+	rect(g, 10, 26, 28, 3, shade(SAND_DARK, 1.15));
+	rect(g, 10, 39, 28, 3, shade(SAND_DARK, 0.85));
+	// Doorway.
+	rect(g, 20, 32, 8, 10, 0x2b2620);
+	// Peaked thatch roof.
+	poly(
+		g,
+		[
+			[4, 26],
+			[24, 8],
+			[44, 26]
+		],
+		0x8a6b3a
+	);
+	poly(
+		g,
+		[
+			[8, 26],
+			[24, 12],
+			[40, 26]
+		],
+		0xa58449
+	);
+	// Thatch lines.
+	g.lineStyle(1, 0x6b4a2f, 1);
+	g.lineBetween(14, 22, 24, 12);
+	g.lineBetween(34, 22, 24, 12);
+}
+
+/** A simple bed: wooden frame with a straw mattress and pillow. */
+function bed(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 34, 22, 6, 0x000000, 0.16);
+	rect(g, 6, 18, 36, 16, WOOD);
+	rect(g, 6, 18, 36, 3, shade(WOOD, 1.2));
+	rect(g, 8, 20, 32, 11, 0xe8dcc0);
+	rect(g, 8, 20, 32, 4, 0xf3ecd8);
+	// Pillow.
+	rect(g, 10, 20, 8, 8, 0xf7f3e8);
+	rect(g, 10, 20, 8, 2, 0xffffff);
+	// Blanket.
+	rect(g, 22, 20, 18, 11, 0x3b7dd8);
+	rect(g, 22, 20, 18, 3, shade(0x3b7dd8, 1.2));
+}
+
+/** A storage chest: banded wooden box with a metal lock. */
+function storage(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 36, 18, 5, 0x000000, 0.18);
+	rect(g, 9, 16, 30, 20, 0x8a5a2b);
+	rect(g, 9, 16, 30, 5, 0xa4713a);
+	rect(g, 9, 31, 30, 5, 0x6b4420);
+	// lid split + planks.
+	g.lineStyle(2, 0x5f3d1c, 1);
+	g.lineBetween(9, 26, 39, 26);
+	g.lineBetween(18, 16, 18, 36);
+	g.lineBetween(30, 16, 30, 36);
+	// metal bands.
+	rect(g, 14, 16, 2, 20, 0x9aa2ae);
+	rect(g, 32, 16, 2, 20, 0x9aa2ae);
+	// lock.
+	rect(g, 21, 24, 6, 5, 0xf1c40f);
+	ball(g, 24, 26, 1, 0x7a5a10);
+}
+
+/** A workbench: table with tools laid out. */
+function workbench(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 37, 20, 5, 0x000000, 0.16);
+	// Legs.
+	rect(g, 9, 30, 4, 8, WOOD_DARK);
+	rect(g, 35, 30, 4, 8, WOOD_DARK);
+	// Table top.
+	rect(g, 6, 20, 36, 12, WOOD);
+	rect(g, 6, 20, 36, 3, shade(WOOD, 1.25));
+	rect(g, 6, 29, 36, 3, WOOD_DARK);
+	// A saw + a hammer on top.
+	rect(g, 10, 17, 10, 2, 0xb0b6c2);
+	poly(
+		g,
+		[
+			[20, 18],
+			[24, 15],
+			[26, 18]
+		],
+		0x8a5a2b
+	);
+	rect(g, 30, 15, 3, 6, 0x8a5a2b);
+	rect(g, 28, 14, 7, 3, 0x5a6375);
+}
+
+/** An open-air cooking station: a stone hearth with a pot on a tripod. */
+function cookingStation(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 40, 22, 6, 0x000000, 0.18);
+	// Stone hearth.
+	ellipse(g, 24, 34, 16, 6, 0x6b7385);
+	ellipse(g, 24, 32, 13, 5, 0x8a93a6);
+	// Fire beneath the pot.
+	poly(
+		g,
+		[
+			[24, 22],
+			[30, 30],
+			[18, 30]
+		],
+		0xed8936
+	);
+	poly(
+		g,
+		[
+			[24, 25],
+			[28, 30],
+			[20, 30]
+		],
+		0xf6ad55
+	);
+	// Tripod legs.
+	g.lineStyle(2, WOOD_DARK, 1);
+	g.lineBetween(12, 32, 24, 12);
+	g.lineBetween(36, 32, 24, 12);
+	// Pot.
+	ellipse(g, 24, 16, 9, 6, 0x4a4f5a);
+	ellipse(g, 24, 14, 8, 4, 0x6b7180);
+	rect(g, 15, 15, 18, 2, 0x2f333b);
+}
+
+/** A water collector: a barrel catching rain, with a tap. */
+function waterCollector(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 38, 18, 5, 0x000000, 0.16);
+	// Barrel body.
+	rect(g, 12, 14, 24, 22, 0x7a5230);
+	rect(g, 12, 14, 24, 4, 0x93663c);
+	rect(g, 12, 32, 24, 4, 0x5f3d1c);
+	rect(g, 12, 14, 4, 22, shade(0x7a5230, 1.15));
+	// Bands.
+	rect(g, 10, 18, 28, 2, 0x9aa2ae);
+	rect(g, 10, 30, 28, 2, 0x9aa2ae);
+	// Water surface visible at the top.
+	ellipse(g, 24, 15, 10, 3, WATER_LIGHT);
+	// Tap.
+	rect(g, 34, 24, 4, 3, 0x9aa2ae);
+	ball(g, 38, 26, 1.5, 0x57a9dd);
+}
+
+/** A tilled farm plot: dark soil rows with sprouts. */
+function farmPlot(g: Phaser.GameObjects.Graphics): void {
+	rect(g, 6, 12, 36, 26, 0x5a3b22);
+	rect(g, 8, 14, 32, 22, 0x6b4a2f);
+	// Furrows.
+	for (const y of [18, 24, 30] as number[]) {
+		rect(g, 8, y, 32, 3, 0x4a3220);
+	}
+	// Sprouts on the rows.
+	for (const [x, y] of [
+		[14, 16],
+		[24, 16],
+		[34, 16],
+		[14, 22],
+		[24, 22],
+		[34, 22],
+		[14, 28],
+		[24, 28],
+		[34, 28]
+	] as [number, number][]) {
+		rect(g, x, y, 1, 3, 0x4a7d3a);
+		ball(g, x, y - 1, 2, LEAF);
+	}
+}
+
+/** A wooden fence segment: two posts with rails. */
+function fence(g: Phaser.GameObjects.Graphics): void {
+	rect(g, 8, 12, 4, 26, WOOD);
+	rect(g, 36, 12, 4, 26, WOOD);
+	rect(g, 8, 12, 2, 26, shade(WOOD, 1.2));
+	rect(g, 36, 12, 2, 26, shade(WOOD, 1.2));
+	rect(g, 8, 18, 32, 3, shade(WOOD, 1.1));
+	rect(g, 8, 28, 32, 3, shade(WOOD, 1.1));
+	ellipse(g, 24, 39, 18, 4, 0x000000, 0.14);
+}
+
+/** A torch: a wooden post topped with a burning flame. */
+function torch(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 40, 8, 4, 0x000000, 0.16);
+	rect(g, 22, 20, 4, 20, WOOD);
+	rect(g, 22, 20, 2, 20, shade(WOOD, 1.2));
+	// Flame.
+	poly(
+		g,
+		[
+			[24, 6],
+			[30, 18],
+			[18, 18]
+		],
+		0xed8936
+	);
+	poly(
+		g,
+		[
+			[24, 10],
+			[28, 18],
+			[20, 18]
+		],
+		0xf6ad55
+	);
+	poly(
+		g,
+		[
+			[24, 14],
+			[26, 18],
+			[22, 18]
+		],
+		0xfee9a3
+	);
+}
+
+/** A house: a pitched-roof cottage with a door and windows. */
+function house(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 32, 52, 30, 7, 0x000000, 0.18);
+	// Walls.
+	rect(g, 10, 30, 44, 22, SAND);
+	rect(g, 10, 30, 44, 4, shade(SAND, 1.1));
+	rect(g, 10, 48, 44, 4, SAND_DARK);
+	// Roof.
+	poly(
+		g,
+		[
+			[4, 32],
+			[32, 8],
+			[60, 32]
+		],
+		0x8a3b2f
+	);
+	poly(
+		g,
+		[
+			[10, 32],
+			[32, 12],
+			[54, 32]
+		],
+		0xa8503e
+	);
+	// Door + windows.
+	rect(g, 28, 38, 10, 14, 0x5f3d1c);
+	rect(g, 37, 44, 2, 3, 0xf1c40f);
+	rect(g, 16, 38, 8, 8, 0x8fd0ee);
+	rect(g, 42, 38, 8, 8, 0x8fd0ee);
+	g.lineStyle(1, 0x5a6375, 1);
+	g.strokeRect(16, 38, 8, 8);
+	g.strokeRect(42, 38, 8, 8);
+}
+
+/** A wooden dock: planks on posts extending over water. */
+function dock(g: Phaser.GameObjects.Graphics): void {
+	// Water hint.
+	rect(g, 0, 30, 64, 20, WATER, 0.5);
+	// Posts.
+	rect(g, 10, 24, 4, 22, WOOD_DARK);
+	rect(g, 31, 24, 4, 22, WOOD_DARK);
+	rect(g, 52, 24, 4, 22, WOOD_DARK);
+	// Deck planks.
+	rect(g, 4, 22, 56, 8, WOOD);
+	rect(g, 4, 22, 56, 2, shade(WOOD, 1.25));
+	for (const x of [8, 20, 32, 44, 56] as number[]) rect(g, x, 22, 1, 8, WOOD_DARK);
+}
+
+/** A boat workshop: an open shed with a boat hull under construction. */
+function boatWorkshop(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 32, 52, 30, 7, 0x000000, 0.18);
+	// Posts + roof.
+	rect(g, 8, 20, 4, 32, WOOD_DARK);
+	rect(g, 52, 20, 4, 32, WOOD_DARK);
+	rect(g, 4, 14, 56, 8, 0x8a6b3a);
+	rect(g, 4, 14, 56, 3, 0xa58449);
+	// Boat hull under construction.
+	poly(
+		g,
+		[
+			[16, 36],
+			[48, 36],
+			[42, 50],
+			[22, 50]
+		],
+		0x8a5a2b
+	);
+	poly(
+		g,
+		[
+			[18, 38],
+			[46, 38],
+			[41, 48],
+			[23, 48]
+		],
+		0xa4713a
+	);
+	// Ribs.
+	g.lineStyle(1, WOOD_DARK, 1);
+	g.lineBetween(24, 36, 26, 50);
+	g.lineBetween(32, 36, 32, 50);
+	g.lineBetween(40, 36, 38, 50);
+}
+
+/** A drying rack: a frame with fish and strips hanging from a top bar. */
+function dryingRack(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 38, 20, 5, 0x000000, 0.14);
+	rect(g, 8, 14, 3, 24, WOOD);
+	rect(g, 37, 14, 3, 24, WOOD);
+	rect(g, 6, 14, 36, 3, shade(WOOD, 1.2));
+	// Hanging fish + strips.
+	for (const [x, y, h] of [
+		[14, 17, 10],
+		[22, 17, 13],
+		[30, 17, 9],
+		[36, 17, 12]
+	] as [number, number, number][]) {
+		rect(g, x, y, 3, h, 0xd8a24a);
+		ball(g, x + 1, y, 2, 0xe8b95e);
+	}
+}
+
+/** A watchtower: a tall stilted platform with a thatch cap. */
+function watchtower(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 26, 52, 20, 6, 0x000000, 0.18);
+	// Legs.
+	g.lineStyle(3, WOOD_DARK, 1);
+	g.lineBetween(14, 52, 20, 26);
+	g.lineBetween(38, 52, 32, 26);
+	g.lineBetween(26, 52, 26, 26);
+	// Cross braces.
+	g.lineStyle(2, WOOD, 1);
+	g.lineBetween(16, 44, 36, 44);
+	g.lineBetween(18, 34, 34, 34);
+	// Platform.
+	rect(g, 14, 22, 24, 6, WOOD);
+	rect(g, 14, 22, 24, 2, shade(WOOD, 1.25));
+	// Thatch canopy.
+	poly(
+		g,
+		[
+			[10, 22],
+			[26, 6],
+			[42, 22]
+		],
+		0x8a6b3a
+	);
+	poly(
+		g,
+		[
+			[14, 22],
+			[26, 10],
+			[38, 22]
+		],
+		0xa58449
+	);
+}
+
+/** A garden lamp: a post with a glowing glass lantern. */
+function gardenLamp(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 40, 9, 4, 0x000000, 0.16);
+	rect(g, 22, 22, 4, 18, 0x4a4f5a);
+	rect(g, 22, 22, 2, 18, 0x6b7180);
+	// Lantern box.
+	rect(g, 17, 12, 14, 12, 0x4a4f5a);
+	rect(g, 19, 14, 10, 8, 0xfee9a3);
+	// Glow.
+	ball(g, 24, 18, 4, 0xfbd38d, 0xf6ad55);
+	rect(g, 16, 10, 16, 3, 0x2f333b);
+}
+
+/** A well: a round stone wall with a peaked roof and a bucket rope. */
+function well(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 26, 48, 24, 6, 0x000000, 0.18);
+	// Stone rim.
+	ellipse(g, 26, 40, 16, 8, 0x6b7385);
+	ellipse(g, 26, 38, 14, 6, 0x8a93a6);
+	ellipse(g, 26, 37, 9, 4, 0x1b2733);
+	// Posts + roof.
+	rect(g, 12, 18, 3, 22, WOOD);
+	rect(g, 37, 18, 3, 22, WOOD);
+	poly(
+		g,
+		[
+			[6, 20],
+			[26, 6],
+			[46, 20]
+		],
+		0x8a6b3a
+	);
+	poly(
+		g,
+		[
+			[10, 20],
+			[26, 9],
+			[42, 20]
+		],
+		0xa58449
+	);
+	// Bucket on a rope.
+	rect(g, 24, 20, 1, 8, 0x5f3d1c);
+	rect(g, 22, 27, 6, 5, 0x8a5a2b);
+}
+
+/** A forge: a stone furnace with a glowing mouth and an anvil. */
+function forge(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 26, 50, 26, 6, 0x000000, 0.2);
+	// Furnace body.
+	rect(g, 12, 20, 28, 28, 0x4a3548);
+	rect(g, 12, 20, 28, 4, 0x5f4660);
+	rect(g, 12, 44, 28, 4, 0x35253a);
+	// Chimney.
+	rect(g, 20, 8, 12, 14, 0x3a2b3f);
+	// Glowing mouth.
+	ellipse(g, 26, 36, 8, 6, 0xff6b1a);
+	ellipse(g, 26, 35, 5, 4, 0xffc46b);
+	// Anvil.
+	rect(g, 42, 40, 12, 4, 0x5a6375);
+	rect(g, 46, 44, 4, 5, 0x3f454f);
+	poly(
+		g,
+		[
+			[42, 40],
+			[54, 40],
+			[58, 36],
+			[40, 36]
+		],
+		0x6b7385
+	);
+}
+
+/**
+ * A construction scaffold: a rough frame with partial materials and a wooden
+ * "?"-free site marker. Shown while a building is being raised, so the player
+ * sees visible progress instead of an unexplained empty plot.
+ */
+function scaffold(g: Phaser.GameObjects.Graphics): void {
+	ellipse(g, 24, 40, 20, 6, 0x000000, 0.16);
+	// Corner posts.
+	rect(g, 8, 16, 3, 26, WOOD);
+	rect(g, 37, 16, 3, 26, WOOD);
+	// Cross poles.
+	rect(g, 8, 16, 32, 3, WOOD_DARK);
+	rect(g, 8, 38, 32, 3, WOOD_DARK);
+	g.lineStyle(2, shade(WOOD, 1.15), 1);
+	g.lineBetween(9, 38, 40, 16);
+	g.lineBetween(9, 16, 40, 38);
+	// A small stack of planks + stones on the ground.
+	rect(g, 14, 34, 12, 3, shade(WOOD, 1.1));
+	rect(g, 14, 31, 12, 3, WOOD);
+	ball(g, 32, 35, 3, 0x8a93a6);
+	ball(g, 36, 36, 2, 0x8a93a6);
+}
+
+// ── Public painters ────────────────────────────────────────────────────
 /**
  * Draw every sprite texture the world needs. Idempotent; call once per scene
  * (BootScene) before the world renders.
@@ -995,6 +1622,27 @@ export function ensureSprites(scene: Phaser.Scene): void {
 	// Actors & structures.
 	P(SPRITE_KEYS.player, 32, 32, (g) => player(g));
 	P(SPRITE_KEYS.npc, 32, 32, (g) => npc(g, 0x63b3ed, 0xe0b088));
+
+	// Placed structures.
+	P(SPRITE_KEYS.campfire, 48, 48, (g) => campfire(g));
+	P(SPRITE_KEYS.shelter, 48, 48, (g) => shelter(g));
+	P(SPRITE_KEYS.bed, 48, 40, (g) => bed(g));
+	P(SPRITE_KEYS.storage, 48, 44, (g) => storage(g));
+	P(SPRITE_KEYS.workbench, 48, 44, (g) => workbench(g));
+	P(SPRITE_KEYS.cookingStation, 48, 48, (g) => cookingStation(g));
+	P(SPRITE_KEYS.waterCollector, 48, 44, (g) => waterCollector(g));
+	P(SPRITE_KEYS.farmPlot, 48, 44, (g) => farmPlot(g));
+	P(SPRITE_KEYS.fence, 48, 44, (g) => fence(g));
+	P(SPRITE_KEYS.torch, 48, 44, (g) => torch(g));
+	P(SPRITE_KEYS.house, 64, 56, (g) => house(g));
+	P(SPRITE_KEYS.dock, 64, 52, (g) => dock(g));
+	P(SPRITE_KEYS.boatWorkshop, 64, 56, (g) => boatWorkshop(g));
+	P(SPRITE_KEYS.dryingRack, 48, 44, (g) => dryingRack(g));
+	P(SPRITE_KEYS.watchtower, 52, 56, (g) => watchtower(g));
+	P(SPRITE_KEYS.lamp, 48, 44, (g) => gardenLamp(g));
+	P(SPRITE_KEYS.well, 52, 52, (g) => well(g));
+	P(SPRITE_KEYS.forge, 60, 56, (g) => forge(g));
+	P(SPRITE_KEYS.scaffold, 48, 48, (g) => scaffold(g));
 }
 
 /** Colour helpers re-exported for other renderers. */

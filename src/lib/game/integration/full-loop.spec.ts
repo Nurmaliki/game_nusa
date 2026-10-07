@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { GameState } from '$game/core/game-state';
 import { getItem } from '$data/items';
+import { BALANCE } from '$game/config/balance';
 
 /**
  * Headless end-to-end gameplay loop through the PURE core (no Phaser, no DOM).
@@ -76,7 +77,9 @@ describe('integration: full gameplay loop', () => {
 		expect(state.inventory.count('wood')).toBe(woodBefore - 5);
 		expect(state.inventory.count('stone')).toBe(stoneBefore - 3);
 
-		// 5. The campfire station is now reachable.
+		// 5. It is under construction first, then becomes a reachable station.
+		expect(state.reachableStations().has('campfire')).toBe(false);
+		state.advanceConstruction(Number.MAX_SAFE_INTEGER);
 		expect(state.reachableStations().has('campfire')).toBe(true);
 	});
 
@@ -99,6 +102,11 @@ describe('integration: full gameplay loop', () => {
 			]).ok
 		).toBe(true);
 
+		// Still cooking-impossible while the campfire is being raised...
+		expect(state.craftAt('cooked_berry').ok).toBe(false);
+
+		// ...then it finishes and cooking works.
+		state.advanceConstruction(Number.MAX_SAFE_INTEGER);
 		const berriesBefore = state.inventory.count('berry');
 		const cooked = state.craftAt('cooked_berry');
 		expect(cooked.ok, 'cooked_berry craft').toBe(true);
@@ -162,6 +170,8 @@ describe('integration: full gameplay loop', () => {
 				{ id: 'stone', qty: 3 }
 			]).ok
 		).toBe(true);
+		// Advance construction halfway so we can prove progress persists.
+		state.advanceConstruction(BALANCE.building.buildDurationMs / 2);
 		state.recordCombatHit();
 		state.visitBiome('rainforest');
 		state.acceptQuest('chapter1_start');
@@ -178,6 +188,10 @@ describe('integration: full gameplay loop', () => {
 		expect(reloaded.inventory.count('wooden_spear')).toBe(1);
 		expect(reloaded.buildings).toHaveLength(state.buildings.length);
 		expect(reloaded.buildings[0].definitionId).toBe('campfire');
+		// Construction progress survives the round trip.
+		expect(reloaded.buildings[0].buildMs).toBe(state.buildings[0].buildMs);
+		expect(reloaded.buildings[0].buildElapsedMs).toBe(state.buildings[0].buildElapsedMs);
+		expect(reloaded.isBuildingComplete(reloaded.buildings[0])).toBe(false);
 		expect(reloaded.statistics).toEqual(state.statistics);
 		expect(reloaded.toSave().world.visitedBiomes).toContain('rainforest');
 		expect(reloaded.toSave().world.talkedNpcs).toContain('penjaga_hutan');

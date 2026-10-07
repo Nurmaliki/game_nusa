@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { PhaserInput } from '../input/phaser-input';
 import { darknessForHour } from '../systems/game-clock';
+import { lightingForHour } from '../world/lighting';
 import { SKILL_LABELS } from '../systems/skills';
 import { BALANCE } from '../config/balance';
 import { log } from '../core/logger';
@@ -11,12 +12,16 @@ import { ChunkManager } from '../world/chunk-manager';
 import { ChunkRenderer, type RenderedNode } from '../world/chunk-renderer';
 import { BuildController } from '../building/build-controller';
 import { getBuilding } from '$data/buildings';
+import { resolveTexture } from '../core/placeholders';
+import { buildingTexture, SPRITE_KEYS } from '../core/sprite-keys';
 import { getResourceNode } from '$data/resources';
 import { getCreature } from '$data/creatures';
 import { WildlifeManager } from '../systems/wildlife';
 import { CreatureRenderer } from '../world/creature-renderer';
 import { NpcRenderer } from '../world/npc-renderer';
 import { Feedback } from '../world/feedback';
+import { Foreground } from '../world/foreground';
+import { Atmosphere } from '../world/atmosphere';
 import { WeatherSystem, getWeather } from '../systems/weather';
 import { getNpc } from '$data/npcs';
 import { getItem } from '$data/items';
@@ -45,8 +50,9 @@ export class WorldScene extends Phaser.Scene {
 	private currentBiome: BiomeId = 'tropical_coast';
 	private discovered = new Set<BiomeId>();
 	private build!: BuildController;
-	private buildingSprites = new Map<string, Phaser.GameObjects.Rectangle>();
-	private buildingDetail = new Map<string, Phaser.GameObjects.Rectangle>();
+	private buildingSprites = new Map<string, Phaser.GameObjects.Image>();
+	/** A progress bar (bg + fill) shown while a structure is being raised. */
+	private buildingProgress = new Map<string, Phaser.GameObjects.Graphics>();
 	private offBuildRequest: (() => void) | null = null;
 	private wildlife!: WildlifeManager;
 	private creatureRenderer!: CreatureRenderer;
@@ -56,6 +62,10 @@ export class WorldScene extends Phaser.Scene {
 	private weather!: WeatherSystem;
 	private weatherOverlay!: Phaser.GameObjects.Rectangle;
 	private rainEmitter?: Phaser.GameObjects.Particles.ParticleEmitter;
+	private rainSplash?: Phaser.GameObjects.Particles.ParticleEmitter;
+	private foreground!: Foreground;
+	private atmosphere!: Atmosphere;
+	private warmthOverlay!: Phaser.GameObjects.Rectangle;
 	private dialogueOpen = false;
 	private offDialogueClose: (() => void) | null = null;
 	private attackCooldownUntil = 0;
@@ -96,6 +106,11 @@ export class WorldScene extends Phaser.Scene {
 			BALANCE.camera.followLerp,
 			BALANCE.camera.followLerp
 		);
+		// Bring the world close so the player reads clearly and the environment
+		// has presence (the default zoom=1 made everything look like tiny icons).
+		this.applyCameraZoom();
+		this.scale.on(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+		this.scale.on(Phaser.Scale.Events.RESIZE, this.onViewportResize, this);
 
 		// Initial active-chunk load.
 		this.loadChunksAround(coastX, coastY, true);
@@ -104,11 +119,21 @@ export class WorldScene extends Phaser.Scene {
 		// full-world multiply) keeps the world readable at all hours: nights dim
 		// rather than blacken. Oversized so no viewport edge is ever un-tinted.
 		this.ambient = this.add
-			.rectangle(-64, -64, this.scale.width + 128, this.scale.height + 128, 0x0a1436, 1)
+			.rectangle(-64, -64, this.scale.width + 128, this.scale.height + 128, 0x1a2450, 1)
 			.setOrigin(0, 0)
 			.setScrollFactor(0)
 			.setDepth(50000)
 			.setBlendMode(Phaser.BlendModes.MULTIPLY)
+			.setAlpha(0);
+
+		// Golden "warmth" overlay: an additive tint that adds dawn/sunset glow
+		// (see §21). Sits just above the ambient multiply and below the weather.
+		this.warmthOverlay = this.add
+			.rectangle(-64, -64, this.scale.width + 128, this.scale.height + 128, 0xffa94d, 1)
+			.setOrigin(0, 0)
+			.setScrollFactor(0)
+			.setDepth(50000.5)
+			.setBlendMode(Phaser.BlendModes.ADD)
 			.setAlpha(0);
 
 		this.currentBiome = this.chunks.biomeAt(coastX, coastY).id;
@@ -141,6 +166,12 @@ export class WorldScene extends Phaser.Scene {
 			.setDepth(50001)
 			.setAlpha(0);
 
+		// Camera-fixed framing: a soft vignette and foreground fronds that give
+		// the top-down world depth (see §14 / §28). Purely presentational.
+		this.foreground = new Foreground(this);
+		// Ambient motes: pollen by day, fireflies by night (see §19 / §30).
+		this.atmosphere = new Atmosphere(this);
+
 		// NPCs: place anchors + render, then accept a dialogue-close signal.
 		state.npcs.placeAnchors(this.chunks.pixelWidth, this.chunks.pixelHeight);
 		this.npcRenderer = new NpcRenderer(this);
@@ -171,12 +202,43 @@ export class WorldScene extends Phaser.Scene {
 		this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
 	}
 
-	/** Keep the camera-fixed ambient overlay covering the whole viewport. */
+	/** Re-lay camera-fixed framing (vignette + fronds) after a viewport resize. */
+	private onViewportResize(): void {
+		this.foreground?.resize();
+		this.atmosphere?.resize();
+	}
+
+	/**
+	 * Set the camera zoom for the current viewport so the player keeps a
+	 * consistent apparent size at every resolution (see §6 / §35). The zoom is
+	 * derived from the viewport height against a target visible-world height,
+	 * then clamped — so a 1080p monitor zooms in rather than showing a huge sea
+	 * of ground with a tiny avatar. Round-pixels keep the art crisp.
+	 */
+	private applyCameraZoom(): void {
+		const h = this.scale.height;
+		const w = this.scale.width;
+		const minEdge = Math.min(w, h);
+		const cam = this.cameras.main;
+		const { targetViewHeightPx, zoomMin, zoomMax } = BALANCE.camera;
+		let zoom = h / targetViewHeightPx;
+		// Very small viewports (phone landscape) see a little more world so the
+		// environment stays navigable.
+		if (minEdge <= BALANCE.camera.smallViewportMax) zoom = Math.min(zoom, 1.3);
+		zoom = Math.max(zoomMin, Math.min(zoomMax, zoom));
+		cam.setZoom(zoom);
+		cam.setRoundPixels(true);
+	}
+
+	/** Keep the camera-fixed lighting overlays covering the whole viewport. */
 	private resizeAmbient(): void {
 		const w = this.scale.width + 128;
 		const h = this.scale.height + 128;
 		if (this.ambient.width !== w || this.ambient.height !== h) {
 			this.ambient.setSize(w, h);
+		}
+		if (this.warmthOverlay.width !== w || this.warmthOverlay.height !== h) {
+			this.warmthOverlay.setSize(w, h);
 		}
 	}
 
@@ -238,13 +300,32 @@ export class WorldScene extends Phaser.Scene {
 		state.clock.advance(delta);
 		state.advanceSurvival(delta, { sprinting: this.player.isSprinting(this.controls) });
 
+		// Construction: raise in-progress buildings and swap their visuals once done.
+		this.updateConstruction(state, delta);
+
 		// Weather: advance the walk, then repaint the overlay + emit on change.
 		this.updateWeather(state, delta);
 
-		const darkness = darknessForHour(state.clock.hour);
-		// Gentle curve: nights dim to ~0.42 max instead of blacking out.
-		this.ambient.setAlpha(Math.max(0, Math.min(0.42, darkness * 0.42)));
+		// Time-of-day lighting: a multiply ambient tint (deep blue at night, not
+		// black) plus an additive golden warmth at dawn/sunset (§20–§22).
+		const light = lightingForHour(state.clock.hour);
+		this.ambient.setFillStyle(light.ambientColor, 1);
+		this.ambient.setAlpha(light.ambientAlpha);
+		this.warmthOverlay.setFillStyle(light.warmColor, 1);
+		this.warmthOverlay.setAlpha(light.warmAlpha);
 		this.resizeAmbient();
+		// Gentle foreground sway + player lantern glow (no-op under reduced motion).
+		this.foreground.update(
+			time,
+			settingsStore.reducedMotion,
+			this.player.position.x,
+			this.player.position.y,
+			darknessForHour(state.clock.hour)
+		);
+		// Wind sway on living vegetation (no-op under reduced motion).
+		this.chunkRenderer.animate(time, settingsStore.reducedMotion);
+		// Ambient motes drift across the viewport (pollen/fireflies).
+		this.atmosphere.update(time, state.clock.hour, settingsStore.reducedMotion);
 
 		// Death check.
 		if (state.stats.health <= 0 && !state.player.isDead) {
@@ -354,12 +435,24 @@ export class WorldScene extends Phaser.Scene {
 		else if (!needsRain && this.rainEmitter) {
 			this.rainEmitter.destroy();
 			this.rainEmitter = undefined;
+			this.rainSplash?.destroy();
+			this.rainSplash = undefined;
 		}
 	}
 
 	/** A camera-fixed rain emitter (streaks falling across the viewport). */
 	private createRain(): Phaser.GameObjects.Particles.ParticleEmitter {
 		const w = this.scale.width;
+		const h = this.scale.height;
+		// Rain splash dots need a small round texture; reuse the ambient mote
+		// (created by Atmosphere) but guard in case order ever changes.
+		if (!this.textures.exists('atmo_mote')) {
+			const g = this.make.graphics({ x: 0, y: 0 }, false);
+			g.fillStyle(0xffffff, 1);
+			g.fillCircle(2, 2, 2);
+			g.generateTexture('atmo_mote', 6, 6);
+			g.destroy();
+		}
 		const zoneConfig: Phaser.Types.GameObjects.Particles.ParticleEmitterRandomZoneConfig = {
 			type: 'random',
 			// A RandomZoneSource only needs getRandomPoint; a plain closure avoids
@@ -372,6 +465,24 @@ export class WorldScene extends Phaser.Scene {
 				}
 			}
 		};
+		// Ground splash: tiny rising/fading dots where rain lands, so the rain
+		// reads as hitting a wet surface (§23) rather than streaks over a dry one.
+		this.rainSplash = this.add
+			.particles(0, 0, 'atmo_mote', {
+				x: { min: 0, max: w },
+				y: { min: h * 0.35, max: h },
+				lifespan: { min: 220, max: 380 },
+				speedY: { min: -30, max: -10 },
+				speedX: { min: -8, max: 8 },
+				scale: { min: 0.3, max: 0.6 },
+				alpha: { start: 0.5, end: 0 },
+				quantity: 1,
+				frequency: 90,
+				maxAliveParticles: 30
+			})
+			.setParticleTint(0xbfd4e6)
+			.setScrollFactor(0)
+			.setDepth(50002.5);
 		return this.add
 			.particles(0, -16, undefined, {
 				x: { min: -40, max: w + 40 },
@@ -519,33 +630,104 @@ export class WorldScene extends Phaser.Scene {
 		});
 	}
 
-	private renderBuildings(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {
-		for (const b of state.buildings) this.renderBuilding(b.id, b.definitionId, b.position);
+	/**
+	 * Advance construction and sync visuals: buildings in progress show the
+	 * scaffold + a progress bar, and on completion swap to their finished sprite
+	 * with a toast + dust puff so the change reads as an event.
+	 */
+	private updateConstruction(
+		state: NonNullable<ReturnType<typeof getGameSession>['state']>,
+		deltaMs: number
+	): void {
+		const finished = state.advanceConstruction(deltaMs);
+		for (const b of finished) {
+			this.feedback.burst(b.position.x, b.position.y - 12, 0xd8c48a, 8);
+			const name = getBuilding(b.definitionId)?.name ?? 'Bangunan';
+			getGameBus().emit('TOAST', { text: `${name} selesai dibangun`, kind: 'success' });
+			getGameBus().emit('SFX', { id: 'build' });
+			// The tutorial's "build" step completes when a structure is finished.
+			getGameBus().emit('TUTORIAL_SIGNAL', { signal: 'build' });
+		}
+		for (const b of state.buildings) this.refreshBuildingVisual(state, b.id);
 	}
 
+	private renderBuildings(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {
+		for (const b of state.buildings) {
+			this.renderBuilding(b.id, b.definitionId, b.position);
+			// Restored builds that are already complete show the finished sprite
+			// straight away; in-progress ones keep the scaffold + progress bar.
+			this.refreshBuildingVisual(state, b.id);
+		}
+	}
+
+	/**
+	 * Create (or fetch) the image object for a placed building. While under
+	 * construction the sprite is the scaffold; `refreshBuildingVisual` swaps it
+	 * to the finished texture once construction completes.
+	 */
 	private renderBuilding(
 		id: string,
 		definitionId: string,
 		position: { x: number; y: number }
 	): void {
 		if (this.buildingSprites.has(id)) return;
-		const def = getBuilding(definitionId);
-		if (!def) return;
-		const tile = BALANCE.world.tileSize;
-		const w = def.size.w * tile;
-		const h = def.size.h * tile;
-		const solid = def.solid;
-		const rect = this.add
-			.rectangle(position.x, position.y, w, h, solid ? 0xb8a06a : 0x9c7b4a, 1)
-			.setStrokeStyle(2, solid ? 0x6b4a2f : 0x4a3220, 1)
+		const texture = resolveTexture(this, buildingTexture(definitionId));
+		const img = this.add
+			.image(position.x, position.y, texture)
+			.setOrigin(0.5, 0.78)
 			.setDepth(position.y);
-		// Cross-plank detail so structures read as built, not flat blocks.
-		const detail = this.add
-			.rectangle(position.x, position.y, w - 6, h - 6, 0x000000, 0)
-			.setStrokeStyle(1, solid ? 0xd8c48a : 0xc0a878, 0.7)
-			.setDepth(position.y + 0.01);
-		this.buildingDetail.set(id, detail);
-		this.buildingSprites.set(id, rect);
+		this.buildingSprites.set(id, img);
+	}
+
+	/**
+	 * Sync a single building's visual with its construction state: scaffold +
+	 * progress bar while raising, the finished sprite when done. Cheap to call
+	 * every frame.
+	 */
+	private refreshBuildingVisual(
+		state: NonNullable<ReturnType<typeof getGameSession>['state']>,
+		id: string
+	): void {
+		const b = state.buildings.find((x) => x.id === id);
+		const img = this.buildingSprites.get(id);
+		if (!b || !img) return;
+		const complete = state.isBuildingComplete(b);
+		const texture = resolveTexture(
+			this,
+			complete ? buildingTexture(b.definitionId) : SPRITE_KEYS.scaffold
+		);
+		if (img.texture.key !== texture) {
+			img.setTexture(texture);
+			img.setOrigin(0.5, complete ? 0.78 : 0.9);
+		}
+		img.setDepth(b.position.y);
+
+		const total = b.buildMs ?? 0;
+		const elapsed = b.buildElapsedMs ?? 0;
+		const building = !complete && total > 0;
+		let bar = this.buildingProgress.get(id);
+		if (building) {
+			if (!bar) {
+				bar = this.add.graphics();
+				this.buildingProgress.set(id, bar);
+			}
+			const w = 36;
+			const h = 5;
+			const x = b.position.x - w / 2;
+			const y = b.position.y - 44;
+			const ratio = Math.max(0, Math.min(1, elapsed / total));
+			bar.clear();
+			bar.setDepth(b.position.y + 1);
+			// Track.
+			bar.fillStyle(0x0b1220, 0.85);
+			bar.fillRect(x - 1, y - 1, w + 2, h + 2);
+			// Fill.
+			bar.fillStyle(0x48bb78, 1);
+			bar.fillRect(x, y, w * ratio, h);
+		} else if (bar) {
+			bar.destroy();
+			this.buildingProgress.delete(id);
+		}
 	}
 
 	private updateBuildMode(state: NonNullable<ReturnType<typeof getGameSession>['state']>): void {
@@ -567,10 +749,16 @@ export class WorldScene extends Phaser.Scene {
 			const id = this.build.commit(state, world, nodes);
 			if (id) {
 				const defId = this.build.definitionId();
-				if (defId) this.renderBuilding(id, defId, { x: world.x, y: world.y });
-				getGameBus().emit('TOAST', { text: 'Bangunan dibangun', kind: 'success' });
+				if (defId) {
+					const placed = state.buildings.find((b) => b.id === id);
+					if (placed) this.renderBuilding(id, defId, placed.position);
+					else this.renderBuilding(id, defId, { x: world.x, y: world.y });
+					// Show the scaffold + progress bar immediately.
+					this.refreshBuildingVisual(state, id);
+					const name = getBuilding(defId)?.name ?? 'Bangunan';
+					getGameBus().emit('TOAST', { text: `Mulai membangun: ${name}`, kind: 'info' });
+				}
 				getGameSession().notifyInventory();
-				getGameBus().emit('TUTORIAL_SIGNAL', { signal: 'build' });
 				this.build.cancel();
 				getGameBus().emit('BUILD_MODE_CHANGED', { definitionId: null });
 			}
@@ -726,6 +914,8 @@ export class WorldScene extends Phaser.Scene {
 	private teardown(): void {
 		this.offBuildRequest?.();
 		this.offDialogueClose?.();
+		this.scale.off(Phaser.Scale.Events.RESIZE, this.applyCameraZoom, this);
+		this.scale.off(Phaser.Scale.Events.RESIZE, this.onViewportResize, this);
 		clearControls();
 		this.build.destroy();
 		this.creatureRenderer.destroy();
@@ -736,13 +926,18 @@ export class WorldScene extends Phaser.Scene {
 		this.chunkRenderer.destroy();
 		this.chunks.clear();
 		this.ambient.destroy();
+		this.warmthOverlay.destroy();
+		this.foreground.destroy();
+		this.atmosphere.destroy();
 		this.weatherOverlay.destroy();
 		this.rainEmitter?.destroy();
 		this.rainEmitter = undefined;
+		this.rainSplash?.destroy();
+		this.rainSplash = undefined;
 		for (const s of this.buildingSprites.values()) s.destroy();
 		this.buildingSprites.clear();
-		for (const s of this.buildingDetail.values()) s.destroy();
-		this.buildingDetail.clear();
+		for (const s of this.buildingProgress.values()) s.destroy();
+		this.buildingProgress.clear();
 		log.info('WORLD', 'World scene shut down');
 	}
 }

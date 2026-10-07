@@ -2,8 +2,31 @@ import Phaser from 'phaser';
 import type { ChunkManager, ChunkData } from './chunk-manager';
 import { getResourceNode } from '$data/resources';
 import { BALANCE } from '../config/balance';
+import { cellHash, dirtFieldAt, grassToneAt, hubRing, pathCurves } from './terrain';
 import { ensurePlaceholderTextures, resourceTexture } from '../core/placeholders';
 import { SPRITE_KEYS } from '../core/sprites';
+import { coordPhase, swayDegrees } from './animation';
+
+/**
+ * Node types that are living vegetation and should sway in the wind. Hard props
+ * (rock, ore veins, clay mounds, ruins) are excluded so only plants move.
+ */
+const SWAYABLE = new Set([
+	'tree',
+	'palm',
+	'hardwood_tree',
+	'pine',
+	'bamboo_grove',
+	'bush',
+	'berry_bush',
+	'herb_patch',
+	'mushroom_patch',
+	'rare_plant'
+]);
+
+function swayableNodeType(typeId: string): boolean {
+	return SWAYABLE.has(typeId);
+}
 
 /**
  * Renders the active chunk set as Phaser game objects (see §8 / §41 / §42).
@@ -20,6 +43,8 @@ export interface RenderedNode {
 	worldX: number;
 	worldY: number;
 	sprite: Phaser.GameObjects.Image;
+	/** Stable sway phase, set only for vegetation (null = static prop). */
+	swayPhase: number | null;
 }
 
 export class ChunkRenderer {
@@ -259,6 +284,77 @@ export class ChunkRenderer {
 			}
 		}
 
+		// Pass 7 — grass-tone patches: large, soft light/dark ellipses on a jittered
+		// world lattice give the meadow natural tonal variation instead of one flat
+		// green. Seeded from world coords (seamless across chunks).
+		//
+		// The lattice range is EXPANDED by a margin so an ellipse whose centre is
+		// just outside this chunk is still drawn (and drawn identically by the
+		// neighbour who owns that cell) — otherwise the cut-off ellipse leaves a
+		// hard seam at the chunk border.
+		const tonCell = 90;
+		const tonMargin = tonCell * 2; // covers the largest radius (1.05·cell) + slack
+		const t0 = Math.floor((originX - tonMargin) / tonCell);
+		const s0 = Math.floor((originY - tonMargin) / tonCell);
+		const t1 = Math.ceil((originX + size + tonMargin) / tonCell);
+		const s1 = Math.ceil((originY + size + tonMargin) / tonCell);
+		for (let sy = s0; sy < s1; sy++) {
+			for (let sx = t0; sx < t1; sx++) {
+				const h = cellHash(this.manager.worldSeed ^ 0x0a1b2c3d, sx, sy);
+				if (h < 0.18) continue; // leave some cells plain
+				const jx = cellHash(this.manager.worldSeed ^ 0x1a2b, sx, sy);
+				const jy = cellHash(this.manager.worldSeed ^ 0x3c4d, sy, sx);
+				const px = (sx + jx) * tonCell - originX;
+				const py = (sy + jy) * tonCell - originY;
+				const wx = originX + px;
+				const wy = originY + py;
+				const tone = grassToneAt(this.manager.worldSeed, wx, wy);
+				const base = this.manager.groundTintAt(wx, wy);
+				const col =
+					tone < 0.5
+						? this.mixColor(base, 0x1c3a24, (0.5 - tone) * 0.7)
+						: this.mixColor(base, 0xc2e08a, (tone - 0.5) * 0.55);
+				const r = tonCell * (0.55 + h * 0.5);
+				g.fillStyle(col, 0.22);
+				g.fillEllipse(px, py, r * 2, r * 1.6);
+			}
+		}
+
+		// Pass 8 — bare earth: soft dirt pockets where the grass thins to soil.
+		// Range expanded like the tone pass so border-crossing blobs line up.
+		const dirtCell = 70;
+		const dirtMargin = dirtCell * 2;
+		const dc0 = Math.floor((originX - dirtMargin) / dirtCell);
+		const dr0 = Math.floor((originY - dirtMargin) / dirtCell);
+		const dc1 = Math.ceil((originX + size + dirtMargin) / dirtCell);
+		const dr1 = Math.ceil((originY + size + dirtMargin) / dirtCell);
+		for (let dr = dr0; dr < dr1; dr++) {
+			for (let dc = dc0; dc < dc1; dc++) {
+				const jx = cellHash(this.manager.worldSeed ^ 0x5e6f, dc, dr);
+				const jy = cellHash(this.manager.worldSeed ^ 0x7a8b, dr, dc);
+				const px = (dc + jx) * dirtCell - originX;
+				const py = (dr + jy) * dirtCell - originY;
+				const wx = originX + px;
+				const wy = originY + py;
+				const dirt = dirtFieldAt(this.manager.worldSeed, wx, wy);
+				if (dirt <= 0.05) continue;
+				const base = this.manager.groundTintAt(wx, wy);
+				const soil = this.mixColor(base, 0x6b4a2c, 0.5 + dirt * 0.4);
+				const r = dirtCell * (0.28 + jx * 0.32);
+				g.fillStyle(soil, Math.min(0.6, 0.2 + dirt * 0.5));
+				g.fillEllipse(px, py, r * 2.2, r * 1.7);
+				// A darker inner dapple for a dug-out centre.
+				if (dirt > 0.55) {
+					g.fillStyle(this.mixColor(soil, 0x2c1c10, 0.45), 0.4);
+					g.fillEllipse(px, py + 1, r * 1.05, r * 0.75);
+				}
+			}
+		}
+
+		// Pass 9 — trails: smooth winding dirt paths drawn as stroked curves, with a
+		// wider lighter gravel band underneath for a soft grass→path transition.
+		this.drawPaths(g, originX, originY);
+
 		// Bake to a static texture, then drop the graphics. The texture key is
 		// unique per chunk so re-entering a chunk reuses the same layout.
 		//
@@ -294,6 +390,40 @@ export class ChunkRenderer {
 		// Stretch the (possibly downscaled) bake back to the chunk's true size.
 		image.setDisplaySize(size, size);
 		this.groundChunks.set(key, image);
+	}
+
+	/**
+	 * Stroke the island's trails onto a chunk's ground graphics, in LOCAL
+	 * coordinates. A wide light gravel band is drawn first, then a narrower
+	 * packed-earth centre on top, giving a soft grass→gravel→earth transition.
+	 * Only a rough bounding check skips work for far-away chunks.
+	 */
+	private drawPaths(g: Phaser.GameObjects.Graphics, originX: number, originY: number): void {
+		const w = this.manager.pixelWidth;
+		const h = this.manager.pixelHeight;
+		const curves = pathCurves(this.manager.worldSeed, w, h);
+		const ring = hubRing(w, h);
+
+		// Local conversion helper.
+		const toLocal = (p: { x: number; y: number }) =>
+			new Phaser.Math.Vector2(p.x - originX, p.y - originY);
+
+		// Gravel underlay (wider, lighter), then earth core for each curve.
+		for (const curve of curves) {
+			const pts = curve.points.map(toLocal);
+			g.lineStyle(curve.width + 10, 0xc2a074, 0.5);
+			g.strokePoints(pts, false, false);
+			g.lineStyle(curve.width, 0x7d5730, 0.9);
+			g.strokePoints(pts, false, false);
+		}
+
+		// Hub ring: a smooth circle trail near the southern coast.
+		const rcx = ring.cx - originX;
+		const rcy = ring.cy - originY;
+		g.lineStyle(ring.width + 10, 0xc2a074, 0.5);
+		g.strokeCircle(rcx, rcy, ring.r);
+		g.lineStyle(ring.width, 0x7d5730, 0.9);
+		g.strokeCircle(rcx, rcy, ring.r);
 	}
 
 	/** Blend two 0xRRGGBB colours; t=0 → a, t=1 → b. */
@@ -334,7 +464,9 @@ export class ChunkRenderer {
 				typeId: node.nodeTypeId,
 				worldX: node.x,
 				worldY: node.y,
-				sprite
+				sprite,
+				// Vegetation rustles in the wind; hard props (rock/ore/mound) stay put.
+				swayPhase: swayableNodeType(node.nodeTypeId) ? coordPhase(node.x, node.y) : null
 			};
 			nodes.push(rendered);
 			this.byInstance.set(node.instanceId, rendered);
@@ -390,6 +522,21 @@ export class ChunkRenderer {
 	/** Hide a node's sprite after it is fully harvested (O(1) lookup). */
 	markHarvested(instanceId: string): void {
 		this.byInstance.get(instanceId)?.sprite.setVisible(false);
+	}
+
+	/**
+	 * Apply the wind sway to living vegetation (see §19). O(active nodes) and
+	 * skipped when the player prefers reduced motion. Rocks/ore are untouched so
+	 * only plants move, and each plant sways on its own stable phase.
+	 */
+	animate(timeMs: number, reducedMotion: boolean): void {
+		if (reducedMotion) return;
+		const amp = BALANCE.feedback.swayAmpDeg;
+		for (const node of this.activeNodes()) {
+			if (node.swayPhase === null) continue;
+			if (!node.sprite.visible) continue;
+			node.sprite.setAngle(swayDegrees(timeMs, node.swayPhase, amp));
+		}
 	}
 
 	destroy(): void {

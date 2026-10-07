@@ -8,6 +8,13 @@ function newState() {
 	return s;
 }
 
+/** Place a building and instantly finish its construction. */
+function placeCompleted(s: GameState, defId: string, pos = { x: 0, y: 0 }) {
+	const r = s.addBuilding(defId, pos, []);
+	if (r.ok) s.advanceConstruction(Number.MAX_SAFE_INTEGER);
+	return r;
+}
+
 describe('GameState construction', () => {
 	it('creates a valid starting state', () => {
 		const s = newState();
@@ -101,13 +108,44 @@ describe('GameState buildings', () => {
 		expect(s.buildings).toHaveLength(0);
 	});
 
+	it('starts placed buildings under construction and finishes over time', () => {
+		const s = newState();
+		const r = s.addBuilding('campfire', { x: 0, y: 0 }, []);
+		expect(r.ok).toBe(true);
+		const b = r.ok ? r.value : null;
+		expect(b).not.toBeNull();
+		expect(b!.buildMs).toBeGreaterThan(0);
+		expect(s.isBuildingComplete(b!)).toBe(false);
+
+		// A partial tick does not finish it.
+		expect(s.advanceConstruction(b!.buildMs! / 2)).toHaveLength(0);
+		expect(s.isBuildingComplete(b!)).toBe(false);
+
+		// The remaining time completes it exactly once.
+		const finished = s.advanceConstruction(b!.buildMs!);
+		expect(finished.map((x) => x.id)).toEqual([b!.id]);
+		expect(s.isBuildingComplete(b!)).toBe(true);
+		// Further ticks are a no-op.
+		expect(s.advanceConstruction(1000)).toHaveLength(0);
+	});
+
 	it('resolves reachable stations from the player position', () => {
 		const s = newState();
-		s.addBuilding('workbench', { x: 0, y: 0 }, []);
+		placeCompleted(s, 'workbench');
 		s.player.position = { x: 10, y: 10 };
 		expect(s.reachableStations().has('workbench')).toBe(true);
 		s.player.position = { x: 5000, y: 5000 };
 		expect(s.reachableStations().has('workbench')).toBe(false);
+	});
+
+	it('does not offer stations from buildings still under construction', () => {
+		const s = newState();
+		s.addBuilding('workbench', { x: 0, y: 0 }, []);
+		s.player.position = { x: 10, y: 10 };
+		expect(s.reachableStations().has('workbench')).toBe(false);
+		// Once finished it becomes usable.
+		s.advanceConstruction(Number.MAX_SAFE_INTEGER);
+		expect(s.reachableStations().has('workbench')).toBe(true);
 	});
 
 	it('removes a placed building by id', () => {
@@ -136,6 +174,7 @@ describe('GameState crafting stations & skills', () => {
 		expect(without.ok).toBe(false);
 
 		s.addBuilding('workbench', { x: 0, y: 0 }, []);
+		s.advanceConstruction(Number.MAX_SAFE_INTEGER);
 		s.player.position = { x: 0, y: 0 };
 		const withStation = s.craftAt('iron_ingot');
 		expect(withStation.ok).toBe(true);
@@ -247,6 +286,7 @@ describe('GameState quests & NPCs', () => {
 		const s = newState();
 		s.inventory.add({ id: 'iron_ore', qty: 10 }, getItem('iron_ore')!);
 		s.addBuilding('workbench', { x: 0, y: 0 }, []);
+		s.advanceConstruction(Number.MAX_SAFE_INTEGER);
 		s.player.position = { x: 0, y: 0 };
 		s.craftAt('iron_ingot');
 		const snap = s.questSnapshot();

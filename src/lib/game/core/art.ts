@@ -129,6 +129,50 @@ export function shade(color: number, factor: number): number {
 	return (r << 16) | (gr << 8) | b;
 }
 
+/**
+ * Scatter small deterministic "pixel" dabs across a region for texture.
+ *
+ * Uses a tiny LCG seeded per-call so a texture is identical every time it is
+ * painted (important: the sprite regression snapshot hashes the op stream).
+ */
+export function scatter(
+	g: Phaser.GameObjects.Graphics,
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+	count: number,
+	color: number,
+	seed = 1,
+	alpha = 1,
+	dot = 1
+): void {
+	let s = seed >>> 0 || 1;
+	const rnd = () => {
+		// Numerical Recipes LCG — cheap + deterministic.
+		s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+		return s / 0xffffffff;
+	};
+	g.fillStyle(color, alpha);
+	for (let i = 0; i < count; i++) {
+		const px = x + Math.floor(rnd() * w);
+		const py = y + Math.floor(rnd() * h);
+		g.fillRect(px, py, dot, dot);
+	}
+}
+
+/** A short blade / tuft of grass (two stacked rects) for organic detail. */
+export function tuft(
+	g: Phaser.GameObjects.Graphics,
+	x: number,
+	y: number,
+	h: number,
+	color: number
+): void {
+	rect(g, x, y, 1, h, color);
+	rect(g, x + 1, y + 1, 1, h - 1, shade(color, 1.15));
+}
+
 /** Blend two 0xRRGGBB colours; t=0 returns a, t=1 returns b. */
 export function mix(a: number, b: number, t: number): number {
 	const ar = (a >> 16) & 0xff;

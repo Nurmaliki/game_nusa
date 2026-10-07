@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bobPhaseFor, idleBobOffset } from './animation';
+import { bobPhaseFor, coordPhase, idleBobOffset, swayDegrees } from './animation';
 import { BALANCE } from '../config/balance';
 
 describe('idleBobOffset', () => {
@@ -42,5 +42,43 @@ describe('bobPhaseFor', () => {
 
 	it('generally differs across ids', () => {
 		expect(bobPhaseFor('crab_1')).not.toBe(bobPhaseFor('crab_2'));
+	});
+});
+
+describe('coordPhase', () => {
+	it('is deterministic for the same coordinates', () => {
+		expect(coordPhase(123.4, 567.8)).toBe(coordPhase(123.4, 567.8));
+	});
+
+	it('returns a value in [0, 2π)', () => {
+		for (let i = 0; i < 50; i++) {
+			const p = coordPhase(i * 97, i * 131);
+			expect(p).toBeGreaterThanOrEqual(0);
+			expect(p).toBeLessThan(Math.PI * 2 + 1e-9);
+		}
+	});
+
+	it('varies across neighbouring coordinates (plants sway out of step)', () => {
+		expect(coordPhase(100, 100)).not.toBe(coordPhase(132, 100));
+	});
+});
+
+describe('swayDegrees', () => {
+	it('stays within the configured amplitude', () => {
+		const amp = BALANCE.feedback.swayAmpDeg;
+		for (let t = 0; t < 12000; t += 53) {
+			expect(Math.abs(swayDegrees(t, 0, amp))).toBeLessThanOrEqual(amp + 1e-9);
+		}
+	});
+
+	it('is zero at the start of a cycle for phase 0', () => {
+		expect(swayDegrees(0, 0)).toBeCloseTo(0, 6);
+	});
+
+	it('shifts with the phase so plants do not sway in lockstep', () => {
+		const quarter = BALANCE.feedback.swayPeriodMs / 4;
+		const amp = BALANCE.feedback.swayAmpDeg;
+		expect(swayDegrees(quarter, 0, amp)).toBeCloseTo(amp, 6);
+		expect(swayDegrees(quarter, Math.PI, amp)).toBeCloseTo(-amp, 6);
 	});
 });

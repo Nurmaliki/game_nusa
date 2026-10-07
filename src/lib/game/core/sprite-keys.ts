@@ -43,7 +43,28 @@ export const SPRITE_KEYS = {
 	npc: 'sprite_npc',
 	tileGrass: 'tile_grass',
 	tileSand: 'tile_sand',
-	tileRock: 'tile_rock'
+	tileRock: 'tile_rock',
+	// Structures (placed buildings). A distinct key per visual family.
+	campfire: 'sprite_campfire',
+	shelter: 'sprite_shelter',
+	bed: 'sprite_bed',
+	storage: 'sprite_storage',
+	workbench: 'sprite_workbench',
+	cookingStation: 'sprite_cooking_station',
+	waterCollector: 'sprite_water_collector',
+	farmPlot: 'sprite_farm_plot',
+	fence: 'sprite_fence',
+	torch: 'sprite_torch',
+	house: 'sprite_house',
+	dock: 'sprite_dock',
+	boatWorkshop: 'sprite_boat_workshop',
+	dryingRack: 'sprite_drying_rack',
+	watchtower: 'sprite_watchtower',
+	lamp: 'sprite_lamp',
+	well: 'sprite_well',
+	forge: 'sprite_forge',
+	/** Shown while a structure is still under construction. */
+	scaffold: 'sprite_scaffold'
 } as const;
 
 /** Biome-agnostic key for a resource node type (falls back to a generic). */
@@ -121,5 +142,57 @@ export function creatureTexture(creatureId: string): string {
 			return SPRITE_KEYS.komodo;
 		default:
 			return SPRITE_KEYS.monkey;
+	}
+}
+
+/**
+ * Key for a placed building definition id. Structures render as a distinct
+ * sprite once built; the finished texture is chosen here so swapping real art
+ * is a one-line change per building. Falls back to the generic storage sprite
+ * so an unmapped building still renders as *something* rather than nothing.
+ */
+export function buildingTexture(definitionId: string): string {
+	switch (definitionId) {
+		case 'campfire':
+			return SPRITE_KEYS.campfire;
+		case 'shelter':
+			return SPRITE_KEYS.shelter;
+		case 'bed':
+			return SPRITE_KEYS.bed;
+		case 'storage':
+		case 'storage_chest':
+			return SPRITE_KEYS.storage;
+		case 'workbench':
+			return SPRITE_KEYS.workbench;
+		case 'cooking_station':
+			return SPRITE_KEYS.cookingStation;
+		case 'water_collector':
+		case 'rain_catcher':
+			return SPRITE_KEYS.waterCollector;
+		case 'farm_plot':
+			return SPRITE_KEYS.farmPlot;
+		case 'fence':
+			return SPRITE_KEYS.fence;
+		case 'torch':
+			return SPRITE_KEYS.torch;
+		case 'house':
+			return SPRITE_KEYS.house;
+		case 'fishing_dock':
+		case 'dock':
+			return SPRITE_KEYS.dock;
+		case 'boat_workshop':
+			return SPRITE_KEYS.boatWorkshop;
+		case 'drying_rack':
+			return SPRITE_KEYS.dryingRack;
+		case 'watchtower':
+			return SPRITE_KEYS.watchtower;
+		case 'garden_lamp':
+			return SPRITE_KEYS.lamp;
+		case 'well':
+			return SPRITE_KEYS.well;
+		case 'obsidian_forge':
+			return SPRITE_KEYS.forge;
+		default:
+			return SPRITE_KEYS.storage;
 	}
 }

@@ -21,6 +21,7 @@
 	import AchievementsPanel from '$lib/components/hud/AchievementsPanel.svelte';
 	import TutorialOverlay from '$lib/components/hud/TutorialOverlay.svelte';
 	import { getGameBus } from '$game/core/event-bus';
+	import { BALANCE } from '$game/config/balance';
 	import { getGameSession } from '$stores/game-session.svelte';
 	import { getItem } from '$data/items';
 	import { getQuest } from '$data/quests';
@@ -170,6 +171,18 @@
 					return s
 						? { health: s.health, hunger: s.hunger, thirst: s.thirst, energy: s.energy }
 						: null;
+				},
+				// Test helper: fast-forward the in-game clock to a target hour (0..24)
+				// so day/night lighting can be asserted without waiting real minutes.
+				setHour: (hour: number) => {
+					const state = session.state;
+					if (!state) return;
+					const msPerDay = BALANCE.dayNight.msPerGameDay;
+					const cur = state.clock.dayFraction * msPerDay;
+					const target = (hour / 24) * msPerDay;
+					let delta = target - cur;
+					if (delta < 0) delta += msPerDay;
+					state.clock.advance(delta);
 				}
 			};
 		}
