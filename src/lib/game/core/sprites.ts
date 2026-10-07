@@ -32,9 +32,6 @@ const LEAF_DARK = 0x367037;
 const LEAF_LIGHT = 0x86cf6f;
 const WATER = 0x3aa0c8;
 const WATER_LIGHT = 0x74c6e4;
-const SKIN = 0xecc096;
-const CLOTH = 0x4f86d6;
-const CLOTH_DARK = 0x35598f;
 
 // ── Ground tiles (32×32) ───────────────────────────────────────────────
 
@@ -973,113 +970,328 @@ function fish(g: Phaser.GameObjects.Graphics): void {
 // ── Player & NPC ───────────────────────────────────────────────────────
 
 /**
- * The player avatar: a friendly Indonesian islander with a warm shirt, drawn at
- * 32×48 so the character reads clearly at world scale (§15 / §16). Features are
- * kept on a 2px grid with a dark silhouette outline so the figure stays crisp —
- * no 1px noise that shimmers under sub-pixel camera zoom.
+ * Player avatar — a friendly Indonesian islander explorer, drawn at 40×56 with
+ * higher detail so the character reads clearly at world scale (§15 / §16).
+ *
+ * The art is built on a 1px grid with deliberate light/shadow: a warm shirt with
+ * collar, buttons and sleeve folds; a woven sash; trousers with a knee crease;
+ * laced boots; a belt with a brass buckle; and a face with brows, an iris catch-
+ * light and a small smile under a wind-blown fringe.
+ *
+ * Three DIRECTIONAL variants are painted so the character faces where it moves:
+ * `down` (front), `up` (back) and `side` (right; mirrored by the scene for left).
+ * All shading keeps a consistent top-left light source.
  */
-function player(g: Phaser.GameObjects.Graphics): void {
-	// Contact shadow (soft ellipse at the feet).
-	ellipse(g, 16, 45, 11, 3.5, 0x000000, 0.26);
 
-	// ── Legs (dark trousers) with a subtle inner shade ──────────────────
-	rect(g, 11, 33, 4, 10, 0x2f4160);
-	rect(g, 17, 33, 4, 10, 0x2f4160);
-	rect(g, 11, 33, 2, 10, 0x263650); // shaded inner leg
-	rect(g, 17, 33, 2, 10, 0x263650);
-	// Boots.
-	rect(g, 10, 41, 6, 4, 0x4a3220);
-	rect(g, 16, 41, 6, 4, 0x4a3220);
-	rect(g, 10, 44, 6, 1, 0x2f1f12);
-	rect(g, 16, 44, 6, 1, 0x2f1f12);
+// Character palette (kept local so it is tweakable without touching world tones).
+const P_SKIN = 0xf0c69b;
+const P_SKIN_D = 0xd2a074;
+const P_SKIN_L = 0xffdcb8;
+const P_HAIR = 0x2c1d12;
+const P_HAIR_L = 0x4a3320;
+const P_SHIRT = 0x4f86d6;
+const P_SHIRT_L = 0x6ea3ec;
+const P_SHIRT_D = 0x33619e;
+const P_PANTS = 0x2f4160;
+const P_PANTS_D = 0x22304a;
+const P_BOOT = 0x4a3220;
+const P_BOOT_D = 0x2f1f12;
+const P_SASH = 0xe0b13f;
+const P_SASH_D = 0xb4882a;
+const P_LINE = 0x1d1409; // dark silhouette outline
 
-	// ── Torso: warm shirt with clear light/shadow and a shoulder line ───
-	rect(g, 9, 19, 14, 15, CLOTH);
-	rect(g, 9, 19, 5, 15, shade(CLOTH, 1.18)); // lit left side
-	rect(g, 18, 19, 5, 15, shade(CLOTH, 0.82)); // shaded right side
-	rect(g, 9, 19, 14, 2, shade(CLOTH, 1.3)); // collar highlight
-	rect(g, 9, 31, 14, 3, shade(CLOTH, 0.7)); // lower hem shadow
-	// A woven sash across the chest (Nusantara touch).
-	rect(g, 19, 20, 3, 12, 0xd9a441);
-	rect(g, 19, 20, 1, 12, 0xf0c766);
+/** Shared soft contact shadow beneath a 40-wide figure, with a lighter core. */
+function pShadow(g: Phaser.GameObjects.Graphics, y: number): void {
+	ellipse(g, 20, y, 12, 4, 0x000000, 0.22);
+	ellipse(g, 20, y, 8, 2.5, 0x000000, 0.16);
+}
 
-	// ── Arms (skin) with short sleeves ──────────────────────────────────
-	rect(g, 5, 21, 4, 11, SKIN);
-	rect(g, 23, 21, 4, 11, SKIN);
-	rect(g, 5, 21, 4, 4, CLOTH_DARK); // sleeve
-	rect(g, 23, 21, 4, 4, CLOTH_DARK);
-	rect(g, 5, 30, 4, 2, shade(SKIN, 0.86)); // hands shading
-	rect(g, 23, 30, 4, 2, shade(SKIN, 0.86));
+/** Both boots + legs, shared by every facing (side tweaks are drawn after). */
+function pLegs(g: Phaser.GameObjects.Graphics, dark: boolean): void {
+	const pant = dark ? P_PANTS_D : P_PANTS;
+	// Thighs / shins.
+	rect(g, 13, 36, 5, 12, pant);
+	rect(g, 22, 36, 5, 12, pant);
+	// Inner-edge shade + a subtle knee crease.
+	rect(g, 13, 36, 1, 12, shade(pant, 0.78));
+	rect(g, 22, 36, 1, 12, shade(pant, 0.9));
+	rect(g, 13, 43, 5, 1, shade(pant, 0.82));
+	rect(g, 22, 43, 5, 1, shade(pant, 0.9));
+	// Boots: toe box, sole, and a lace line.
+	rect(g, 12, 48, 7, 5, P_BOOT);
+	rect(g, 21, 48, 7, 5, P_BOOT);
+	rect(g, 12, 51, 7, 2, P_BOOT_D);
+	rect(g, 21, 51, 7, 2, P_BOOT_D);
+	rect(g, 12, 48, 7, 1, shade(P_BOOT, 1.25));
+	rect(g, 21, 48, 7, 1, shade(P_BOOT, 1.25));
+	rect(g, 14, 49, 3, 1, 0x6b4a2f); // lace
+	rect(g, 23, 49, 3, 1, 0x6b4a2f);
+}
 
-	// ── Head: clear face with a 1px dark outline for readability ────────
-	// Outline first, then fill so edges stay crisp against the ground.
-	rect(g, 9, 5, 14, 15, 0x2a1c12); // head silhouette base
-	rect(g, 10, 6, 12, 13, SKIN); // face fill
-	rect(g, 10, 6, 12, 3, shade(SKIN, 1.08)); // forehead light
-	rect(g, 10, 16, 12, 3, shade(SKIN, 0.9)); // jaw shade
+/** Belt with a brass buckle (over the waist). */
+function pBelt(g: Phaser.GameObjects.Graphics): void {
+	rect(g, 12, 34, 16, 3, 0x6b4a2f);
+	rect(g, 12, 34, 16, 1, 0x855c39);
+	rect(g, 18, 33, 5, 4, P_SASH);
+	rect(g, 19, 34, 3, 2, 0x8a6a20);
+}
+
+/** FRONT-facing player. */
+function playerDown(g: Phaser.GameObjects.Graphics): void {
+	pShadow(g, 54);
+
+	// Torso — shirt with lit-left / shaded-right volume and a shoulder seam.
+	rect(g, 12, 20, 16, 16, P_SHIRT);
+	rect(g, 12, 20, 6, 16, P_SHIRT_L);
+	rect(g, 23, 20, 5, 16, P_SHIRT_D);
+	rect(g, 12, 20, 16, 2, shade(P_SHIRT, 1.3)); // shoulder light
+	rect(g, 12, 34, 16, 2, P_SHIRT_D); // lower hem
+	// Collar (V opening showing skin).
+	rect(g, 17, 20, 6, 4, P_SKIN_D);
+	rect(g, 15, 20, 3, 2, P_SHIRT_L);
+	rect(g, 22, 20, 3, 2, P_SHIRT_L);
+	// Buttons down the centre.
+	rect(g, 19, 25, 2, 1, shade(P_SHIRT, 1.4));
+	rect(g, 19, 29, 2, 1, shade(P_SHIRT, 1.4));
+	// Woven sash across the chest with a highlight.
+	rect(g, 22, 22, 5, 12, P_SASH);
+	rect(g, 22, 22, 2, 12, shade(P_SASH, 1.2));
+	rect(g, 22, 22, 5, 1, P_SASH_D);
+	rect(g, 22, 33, 5, 1, P_SASH_D);
+
+	// Arms + hands (sleeves cuffed, hands with a thumb).
+	rect(g, 8, 22, 5, 12, P_SHIRT_D); // left sleeve
+	rect(g, 27, 22, 5, 12, P_SHIRT_D); // right sleeve
+	rect(g, 8, 22, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 27, 22, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 8, 33, 5, 5, P_SKIN); // left hand
+	rect(g, 27, 33, 5, 5, P_SKIN);
+	rect(g, 8, 37, 5, 1, P_SKIN_D);
+	rect(g, 27, 37, 5, 1, P_SKIN_D);
+	rect(g, 12, 34, 1, 3, P_SKIN_D); // thumbs
+	rect(g, 27, 34, 1, 3, P_SKIN_D);
+
+	pLegs(g, false);
+	pBelt(g);
+
 	// Neck.
-	rect(g, 13, 18, 6, 3, shade(SKIN, 0.82));
+	rect(g, 16, 18, 8, 4, P_SKIN_D);
+	rect(g, 16, 18, 8, 2, shade(P_SKIN_D, 0.85));
 
-	// ── Hair: dark, with a fringe and a warm highlight ──────────────────
-	rect(g, 9, 4, 14, 5, 0x3a2a1a); // top cap
-	rect(g, 9, 4, 14, 2, 0x4a3624); // light top
-	rect(g, 9, 4, 3, 9, 0x3a2a1a); // left sideburn
-	rect(g, 20, 4, 3, 9, 0x3a2a1a); // right sideburn
-	rect(g, 13, 4, 6, 2, 0x5a4326); // fringe highlight
+	// Head: silhouette outline, face fill, brow/cheek shading.
+	rect(g, 11, 4, 18, 16, P_LINE);
+	rect(g, 12, 5, 16, 14, P_SKIN);
+	rect(g, 12, 5, 16, 3, P_SKIN_L); // forehead light
+	rect(g, 12, 16, 16, 3, P_SKIN_D); // jaw shade
+	// Ears.
+	rect(g, 10, 9, 2, 4, P_SKIN);
+	rect(g, 28, 9, 2, 4, P_SKIN);
+	rect(g, 10, 9, 1, 4, P_SKIN_D);
+	rect(g, 29, 9, 1, 4, P_SKIN_D);
 
-	// ── Face details (2px eyes, 1px shine, rosy cheeks, tiny smile) ─────
-	rect(g, 12, 10, 2, 3, 0x2a2118); // left eye
-	rect(g, 18, 10, 2, 3, 0x2a2118); // right eye
-	rect(g, 12, 10, 1, 1, 0xf5f0e6); // eye shine
-	rect(g, 18, 10, 1, 1, 0xf5f0e6);
-	rect(g, 11, 14, 2, 1, 0xe8907a); // left cheek blush
-	rect(g, 19, 14, 2, 1, 0xe8907a); // right cheek blush
-	rect(g, 15, 15, 2, 1, 0xb5785a); // small mouth
+	// Hair: rounded cap that frames the face (never a flat block) with a thick
+	// swept fringe, pointed sideburns and a warm sheen. The fringe stops just
+	// above the brows so a clear band of forehead + the whole face stay open.
+	rect(g, 11, 3, 18, 5, P_HAIR); // cap body
+	rect(g, 12, 2, 16, 2, P_HAIR); // rounded top edge
+	rect(g, 13, 2, 13, 1, P_HAIR_L); // top light
+	rect(g, 11, 3, 3, 9, P_HAIR); // left sideburn
+	rect(g, 26, 3, 3, 9, P_HAIR); // right sideburn
+	// Swept fringe: asymmetric bangs with a gap over the forehead centre.
+	rect(g, 12, 7, 6, 3, P_HAIR);
+	rect(g, 23, 7, 4, 2, P_HAIR);
+	rect(g, 15, 3, 7, 2, 0x6b4d2c); // sheen highlight
+	rect(g, 11, 3, 18, 1, shade(P_HAIR, 0.8)); // dark top rim
 
-	// ── Belt with a bright buckle ───────────────────────────────────────
-	rect(g, 9, 32, 14, 3, 0x6b4a2f);
-	rect(g, 9, 32, 14, 1, 0x835c3a);
-	rect(g, 14, 32, 4, 3, 0xd9a441);
+	// Face: bold brows, LARGE expressive eyes (read clearly at world scale),
+	// a soft nose, rosy cheeks and a small friendly smile.
+	rect(g, 13, 9, 5, 1, 0x241a12); // left brow (bold)
+	rect(g, 23, 9, 5, 1, 0x241a12); // right brow
+	rect(g, 13, 10, 5, 5, 0xffffff); // left eye white
+	rect(g, 23, 10, 5, 5, 0xffffff); // right eye white
+	rect(g, 14, 11, 3, 4, 0x2f6b4a); // left iris (warm green-brown)
+	rect(g, 24, 11, 3, 4, 0x2f6b4a); // right iris
+	rect(g, 14, 11, 3, 2, 0x1c1409); // upper lid shadow
+	rect(g, 24, 11, 3, 2, 0x1c1409);
+	rect(g, 14, 12, 1, 1, 0xffffff); // catchlights
+	rect(g, 24, 12, 1, 1, 0xffffff);
+	rect(g, 19, 12, 2, 3, P_SKIN_D); // nose shadow
+	rect(g, 15, 16, 2, 1, 0xeb8e78); // blush
+	rect(g, 24, 16, 2, 1, 0xeb8e78);
+	rect(g, 18, 17, 4, 1, 0xa9613f); // smile
+	rect(g, 18, 17, 4, 1, 0xa9613f);
+}
+
+/** BACK-facing player (seen from behind). */
+function playerUp(g: Phaser.GameObjects.Graphics): void {
+	pShadow(g, 54);
+
+	// Torso — plain back of the shirt (no collar/buttons), same volume.
+	rect(g, 12, 20, 16, 16, P_SHIRT);
+	rect(g, 12, 20, 6, 16, P_SHIRT_L);
+	rect(g, 23, 20, 5, 16, P_SHIRT_D);
+	rect(g, 12, 20, 16, 2, shade(P_SHIRT, 1.3));
+	rect(g, 12, 34, 16, 2, P_SHIRT_D);
+	// Sash continuing over the shoulder and back.
+	rect(g, 22, 21, 5, 13, P_SASH);
+	rect(g, 22, 21, 2, 13, shade(P_SASH, 1.2));
+
+	// Arms + hands.
+	rect(g, 8, 22, 5, 12, P_SHIRT_D);
+	rect(g, 27, 22, 5, 12, P_SHIRT_D);
+	rect(g, 8, 22, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 27, 22, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 8, 33, 5, 5, P_SKIN);
+	rect(g, 27, 33, 5, 5, P_SKIN);
+	rect(g, 8, 37, 5, 1, P_SKIN_D);
+	rect(g, 27, 37, 5, 1, P_SKIN_D);
+
+	pLegs(g, true);
+	pBelt(g);
+
+	// Neck (mostly hidden by hair).
+	rect(g, 16, 18, 8, 4, P_SKIN_D);
+
+	// Head from behind: a solid hair mass with a rounded top, a bold sheen and a
+	// shaded nape — no face, as expected when the character faces away.
+	rect(g, 11, 4, 18, 16, P_LINE);
+	rect(g, 12, 5, 16, 15, P_HAIR);
+	rect(g, 12, 3, 16, 2, P_HAIR); // rounded top edge
+	rect(g, 13, 3, 13, 1, P_HAIR_L);
+	rect(g, 12, 5, 16, 2, P_HAIR_L);
+	rect(g, 12, 16, 16, 3, shade(P_HAIR, 0.8)); // nape shade
+	rect(g, 15, 6, 10, 4, 0x6b4d2c); // sheen
+	rect(g, 10, 10, 2, 8, P_HAIR); // hair falls over ears
+	rect(g, 28, 10, 2, 8, P_HAIR);
+	rect(g, 11, 4, 18, 1, shade(P_HAIR, 0.8));
+}
+
+/** RIGHT-facing player (scene mirrors horizontally for left). */
+function playerSide(g: Phaser.GameObjects.Graphics): void {
+	pShadow(g, 54);
+
+	// Torso in profile (narrower), lit from the front-left.
+	rect(g, 13, 20, 14, 16, P_SHIRT);
+	rect(g, 13, 20, 5, 16, P_SHIRT_L);
+	rect(g, 24, 20, 3, 16, P_SHIRT_D);
+	rect(g, 13, 20, 14, 2, shade(P_SHIRT, 1.3));
+	rect(g, 13, 34, 14, 2, P_SHIRT_D);
+	// Sash edge visible at the front.
+	rect(g, 22, 21, 4, 13, P_SASH);
+	rect(g, 22, 21, 2, 13, shade(P_SASH, 1.2));
+
+	// Near arm swung forward, far arm hinted behind the torso.
+	rect(g, 9, 22, 5, 13, P_SHIRT_D); // near sleeve
+	rect(g, 9, 22, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 9, 34, 5, 5, P_SKIN); // near hand
+	rect(g, 9, 38, 5, 1, P_SKIN_D);
+	rect(g, 26, 24, 3, 9, shade(P_SHIRT_D, 0.82)); // far arm (behind)
+
+	// Legs in profile: near leg forward, far leg behind.
+	rect(g, 15, 36, 5, 12, P_PANTS);
+	rect(g, 21, 36, 4, 12, P_PANTS_D); // far leg
+	rect(g, 15, 36, 1, 12, shade(P_PANTS, 0.8));
+	rect(g, 13, 48, 8, 5, P_BOOT); // near boot (longer toe)
+	rect(g, 20, 48, 6, 5, shade(P_BOOT, 0.85)); // far boot
+	rect(g, 13, 51, 8, 2, P_BOOT_D);
+	rect(g, 20, 51, 6, 2, P_BOOT_D);
+	rect(g, 13, 48, 8, 1, shade(P_BOOT, 1.25));
+
+	pBelt(g);
+
+	// Neck.
+	rect(g, 16, 18, 7, 4, P_SKIN_D);
+
+	// Head in profile: rounded skull, nose + chin to the right.
+	rect(g, 12, 4, 16, 16, P_LINE);
+	rect(g, 13, 5, 14, 14, P_SKIN);
+	rect(g, 13, 5, 14, 3, P_SKIN_L);
+	rect(g, 13, 16, 14, 3, P_SKIN_D);
+	rect(g, 27, 10, 2, 4, P_SKIN); // nose
+	rect(g, 27, 10, 1, 4, P_SKIN_D);
+	rect(g, 13, 9, 2, 4, P_SKIN); // ear
+	rect(g, 13, 9, 1, 4, P_SKIN_D);
+
+	// Hair: rounded cap over the back of the head, a bold swept fringe to the
+	// right, and a warm sheen — leaving the forehead + eye open.
+	rect(g, 12, 3, 15, 7, P_HAIR);
+	rect(g, 13, 2, 13, 2, P_HAIR); // rounded top edge
+	rect(g, 14, 2, 11, 1, P_HAIR_L);
+	rect(g, 12, 3, 5, 12, P_HAIR); // back of head hair
+	rect(g, 20, 6, 6, 3, P_HAIR); // fringe sweeping right
+	rect(g, 24, 7, 3, 2, P_HAIR); // fringe point
+	rect(g, 15, 3, 7, 2, 0x6b4d2c); // sheen
+	rect(g, 12, 3, 15, 1, shade(P_HAIR, 0.8));
+
+	// Face profile: bold brow, LARGE eye with catchlight, blush, small smile.
+	rect(g, 21, 9, 4, 1, 0x241a12); // brow
+	rect(g, 21, 10, 4, 5, 0xffffff); // eye white
+	rect(g, 22, 11, 3, 4, 0x2f6b4a); // iris
+	rect(g, 22, 11, 3, 2, 0x1c1409); // lid shadow
+	rect(g, 22, 12, 1, 1, 0xffffff); // catchlight
+	rect(g, 21, 16, 2, 1, 0xeb8e78); // cheek
+	rect(g, 25, 17, 2, 1, 0xa9613f); // smile
 }
 
 /**
- * A villager NPC, drawn at 32×48 to match the player's scale and readability
- * (§15 / §17): clear silhouette outline, 2px-grid features, tinted cloth.
+ * A villager NPC, drawn at 40×56 to match the player's scale and readability
+ * (§15 / §17): the same silhouette and shading language, with cloth-tinted
+ * tunic, a head-wrap and a simple friendly face.
  */
 function npc(g: Phaser.GameObjects.Graphics, cloth: number, skin: number): void {
-	// Contact shadow.
-	ellipse(g, 16, 45, 11, 3.5, 0x000000, 0.24);
+	pShadow(g, 54);
 
 	// Legs.
-	rect(g, 11, 33, 4, 10, shade(cloth, 0.62));
-	rect(g, 17, 33, 4, 10, shade(cloth, 0.62));
-	rect(g, 10, 41, 6, 4, 0x4a3220); // boots
-	rect(g, 16, 41, 6, 4, 0x4a3220);
+	rect(g, 13, 36, 5, 12, shade(cloth, 0.6));
+	rect(g, 22, 36, 5, 12, shade(cloth, 0.6));
+	rect(g, 13, 36, 1, 12, shade(cloth, 0.48));
+	rect(g, 12, 48, 7, 5, P_BOOT);
+	rect(g, 21, 48, 7, 5, P_BOOT);
+	rect(g, 12, 51, 7, 2, P_BOOT_D);
+	rect(g, 21, 51, 7, 2, P_BOOT_D);
 
-	// Torso with light/shadow sides.
-	rect(g, 9, 19, 14, 15, cloth);
-	rect(g, 9, 19, 5, 15, shade(cloth, 1.18));
-	rect(g, 18, 19, 5, 15, shade(cloth, 0.8));
-	rect(g, 9, 31, 14, 3, shade(cloth, 0.66));
+	// Tunic with volume.
+	rect(g, 12, 20, 16, 16, cloth);
+	rect(g, 12, 20, 6, 16, shade(cloth, 1.2));
+	rect(g, 23, 20, 5, 16, shade(cloth, 0.8));
+	rect(g, 12, 20, 16, 2, shade(cloth, 1.35));
+	rect(g, 12, 34, 16, 2, shade(cloth, 0.68));
 
-	// Arms + sleeves.
-	rect(g, 5, 21, 4, 11, skin);
-	rect(g, 23, 21, 4, 11, skin);
-	rect(g, 5, 21, 4, 4, shade(cloth, 0.7));
-	rect(g, 23, 21, 4, 4, shade(cloth, 0.7));
-
-	// Head with outline, hair and simple face.
-	rect(g, 9, 5, 14, 15, 0x2a1c12);
-	rect(g, 10, 6, 12, 13, skin);
-	rect(g, 10, 6, 12, 3, shade(skin, 1.08));
-	rect(g, 13, 18, 6, 3, shade(skin, 0.82));
-	rect(g, 9, 4, 14, 5, shade(cloth, 0.5)); // headscarf/hair band
-	rect(g, 9, 4, 14, 2, shade(cloth, 0.7));
-	rect(g, 12, 10, 2, 3, 0x2a2118);
-	rect(g, 18, 10, 2, 3, 0x2a2118);
+	// Arms + sleeves + hands.
+	rect(g, 8, 22, 5, 12, shade(cloth, 0.72));
+	rect(g, 27, 22, 5, 12, shade(cloth, 0.72));
+	rect(g, 8, 33, 5, 5, skin);
+	rect(g, 27, 33, 5, 5, skin);
+	rect(g, 8, 37, 5, 1, shade(skin, 0.82));
+	rect(g, 27, 37, 5, 1, shade(skin, 0.82));
 
 	// Belt.
-	rect(g, 9, 32, 14, 3, shade(cloth, 0.45));
+	rect(g, 12, 34, 16, 3, shade(cloth, 0.42));
+
+	// Neck + head.
+	rect(g, 16, 18, 8, 4, shade(skin, 0.86));
+	rect(g, 11, 4, 18, 16, P_LINE);
+	rect(g, 12, 5, 16, 14, skin);
+	rect(g, 12, 5, 16, 3, shade(skin, 1.1));
+	rect(g, 12, 16, 16, 3, shade(skin, 0.88));
+	rect(g, 10, 9, 2, 4, skin);
+	rect(g, 28, 9, 2, 4, skin);
+
+	// Head-wrap (batik-ish) instead of hair.
+	rect(g, 11, 3, 18, 6, shade(cloth, 0.5));
+	rect(g, 11, 3, 18, 2, shade(cloth, 0.72));
+	rect(g, 11, 3, 3, 9, shade(cloth, 0.5));
+	rect(g, 26, 3, 3, 9, shade(cloth, 0.5));
+	rect(g, 15, 5, 10, 1, shade(cloth, 0.9)); // wrap band
+
+	// Face.
+	rect(g, 14, 9, 4, 1, shade(cloth, 0.4));
+	rect(g, 23, 9, 4, 1, shade(cloth, 0.4));
+	rect(g, 14, 11, 3, 3, 0x2a2118);
+	rect(g, 24, 11, 3, 3, 0x2a2118);
+	rect(g, 14, 11, 1, 1, 0xffffff);
+	rect(g, 24, 11, 1, 1, 0xffffff);
+	rect(g, 18, 16, 4, 1, 0xa9613f);
 }
 
 // ── Structures (placed buildings) ──────────────────────────────────────
@@ -1678,8 +1890,11 @@ export function ensureSprites(scene: Phaser.Scene): void {
 	P(SPRITE_KEYS.komodo, 60, 42, (g) => komodo(g));
 
 	// Actors & structures.
-	P(SPRITE_KEYS.player, 32, 48, (g) => player(g));
-	P(SPRITE_KEYS.npc, 32, 48, (g) => npc(g, 0x63b3ed, 0xe0b088));
+	P(SPRITE_KEYS.player, 40, 56, (g) => playerDown(g));
+	P(SPRITE_KEYS.playerDown, 40, 56, (g) => playerDown(g));
+	P(SPRITE_KEYS.playerUp, 40, 56, (g) => playerUp(g));
+	P(SPRITE_KEYS.playerSide, 40, 56, (g) => playerSide(g));
+	P(SPRITE_KEYS.npc, 40, 56, (g) => npc(g, 0x63b3ed, 0xe0b088));
 
 	// Placed structures.
 	P(SPRITE_KEYS.campfire, 48, 48, (g) => campfire(g));

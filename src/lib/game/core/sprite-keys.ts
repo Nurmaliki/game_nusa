@@ -8,6 +8,10 @@
 
 export const SPRITE_KEYS = {
 	player: 'sprite_player',
+	/** Directional player art: side is drawn right-facing and mirrored for left. */
+	playerDown: 'sprite_player_down',
+	playerUp: 'sprite_player_up',
+	playerSide: 'sprite_player_side',
 	tree: 'sprite_tree',
 	pine: 'sprite_pine',
 	palm: 'sprite_palm',
@@ -66,6 +70,22 @@ export const SPRITE_KEYS = {
 	/** Shown while a structure is still under construction. */
 	scaffold: 'sprite_scaffold'
 } as const;
+
+/**
+ * Map a facing direction to the player's directional texture key + whether to
+ * mirror it. Pure (no engine) so it is unit-testable. `side` art is drawn
+ * right-facing, so leftward movement mirrors it.
+ */
+export function playerFacingTexture(facing: { x: number; y: number }): {
+	key: string;
+	flipX: boolean;
+} {
+	if (Math.abs(facing.x) > Math.abs(facing.y)) {
+		return { key: SPRITE_KEYS.playerSide, flipX: facing.x < 0 };
+	}
+	if (facing.y < 0) return { key: SPRITE_KEYS.playerUp, flipX: false };
+	return { key: SPRITE_KEYS.playerDown, flipX: false };
+}
 
 /** Biome-agnostic key for a resource node type (falls back to a generic). */
 export function resourceTexture(nodeTypeId: string): string {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { creatureTexture, buildingTexture, resourceTexture, SPRITE_KEYS } from './sprite-keys';
+import {
+	creatureTexture,
+	buildingTexture,
+	resourceTexture,
+	playerFacingTexture,
+	SPRITE_KEYS
+} from './sprite-keys';
 import { RESOURCE_NODE_LIST } from '$data/resources';
 import { CREATURE_LIST } from '$data/creatures';
 import { BUILDING_LIST } from '$data/buildings';
@@ -73,5 +79,44 @@ describe('buildingTexture', () => {
 
 	it('falls back to the generic storage sprite for unknown buildings', () => {
 		expect(buildingTexture('does_not_exist')).toBe(SPRITE_KEYS.storage);
+	});
+});
+
+describe('playerFacingTexture', () => {
+	it('faces down (front art) for downward movement', () => {
+		expect(playerFacingTexture({ x: 0, y: 1 })).toEqual({
+			key: SPRITE_KEYS.playerDown,
+			flipX: false
+		});
+	});
+
+	it('faces up (back art) for upward movement', () => {
+		expect(playerFacingTexture({ x: 0, y: -1 })).toEqual({
+			key: SPRITE_KEYS.playerUp,
+			flipX: false
+		});
+	});
+
+	it('uses right-facing side art (unflipped) for rightward movement', () => {
+		expect(playerFacingTexture({ x: 1, y: 0 })).toEqual({
+			key: SPRITE_KEYS.playerSide,
+			flipX: false
+		});
+	});
+
+	it('mirrors the side art for leftward movement', () => {
+		expect(playerFacingTexture({ x: -1, y: 0 })).toEqual({
+			key: SPRITE_KEYS.playerSide,
+			flipX: true
+		});
+	});
+
+	it('prefers the horizontal art on diagonal movement (dominant axis)', () => {
+		expect(playerFacingTexture({ x: 0.7, y: 0.5 }).key).toBe(SPRITE_KEYS.playerSide);
+		expect(playerFacingTexture({ x: 0.7, y: -0.5 }).key).toBe(SPRITE_KEYS.playerSide);
+	});
+
+	it('faces down for a shallow downward diagonal', () => {
+		expect(playerFacingTexture({ x: 0.3, y: 0.9 }).key).toBe(SPRITE_KEYS.playerDown);
 	});
 });

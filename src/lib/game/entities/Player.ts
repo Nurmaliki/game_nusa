@@ -71,12 +71,14 @@ export class Player {
 			body.setVelocity(v.x, v.y);
 		}
 
-		// Track facing (prefer aim when the pointer provides a direction).
+		// Track facing. Moving always faces the direction of travel (so WASD/joystick
+		// drives the sprite and it never moonwalks); when standing still a pointer
+		// aim takes over so the character can look around / aim.
 		const aim = clampMagnitude(input.aimVector(), 1);
-		if (aim.x !== 0 || aim.y !== 0) {
-			this.facing = normalize(aim);
-		} else if (move.x !== 0 || move.y !== 0) {
+		if (move.x !== 0 || move.y !== 0) {
 			this.facing = normalize(move);
+		} else if (aim.x !== 0 || aim.y !== 0) {
+			this.facing = normalize(aim);
 		}
 	}
 

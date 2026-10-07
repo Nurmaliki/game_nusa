@@ -13,7 +13,7 @@ import { ChunkRenderer, type RenderedNode } from '../world/chunk-renderer';
 import { BuildController } from '../building/build-controller';
 import { getBuilding } from '$data/buildings';
 import { resolveTexture } from '../core/placeholders';
-import { buildingTexture, SPRITE_KEYS } from '../core/sprite-keys';
+import { buildingTexture, playerFacingTexture, SPRITE_KEYS } from '../core/sprite-keys';
 import { getResourceNode } from '$data/resources';
 import { getCreature } from '$data/creatures';
 import { WildlifeManager } from '../systems/wildlife';
@@ -234,6 +234,18 @@ export class WorldScene extends Phaser.Scene {
 		cam.setRoundPixels(true);
 	}
 
+	/**
+	 * Choose the player's directional texture from its facing vector: moving up
+	 * uses the back, moving down the front, and horizontal movement uses the side
+	 * art (mirrored for left). Presentation only — the physics body is untouched.
+	 */
+	private updatePlayerFacing(): void {
+		const { key, flipX } = playerFacingTexture(this.player.facingVector);
+		const sprite = this.player.sprite;
+		sprite.setTexture(key);
+		sprite.setFlipX(flipX);
+	}
+
 	/** Keep the camera-fixed lighting overlays covering the whole viewport. */
 	private resizeAmbient(): void {
 		const w = this.scale.width + 128;
@@ -278,6 +290,9 @@ export class WorldScene extends Phaser.Scene {
 		state.player.position = this.player.position;
 		// Y-sort the player among world objects so tall sprites overlap correctly.
 		this.player.sprite.setDepth(this.player.position.y);
+		// Face the direction of travel — swap to the up/side/down art and mirror
+		// the side art for leftward movement. Pure presentation, no body change.
+		this.updatePlayerFacing();
 		// NOTE: no sprite scaling/bobbing for the player. A fractional "breath"
 		// scale (1.0±0.02) blurred the pixel art under the camera zoom, and moving
 		// the sprite would drag its physics body. The player stays pixel-crisp and
