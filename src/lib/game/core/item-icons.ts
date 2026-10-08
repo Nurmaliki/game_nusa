@@ -18,70 +18,121 @@ export interface ItemIcon {
 	tint: string;
 }
 
-/** Explicit overrides for the most common / most important item ids. */
+/**
+ * Explicit glyph per item id.
+ *
+ * IMPORTANT: every id in the catalogue (`$data/items`) should appear here. If an
+ * id is missing, the icon falls back to a CATEGORY glyph, which frequently reads
+ * as the wrong object (e.g. "Kapak Batu" showed a wrench because `tool` → 🔧).
+ * `item-icons.spec.ts` asserts full coverage so a new item can never silently
+ * regress to a mismatched icon.
+ */
 const BY_ID: Record<string, ItemIcon> = {
-	// Resources
+	// ── Common resources ────────────────────────────────────────────────
 	wood: { glyph: '🪵', tint: '#8a5a2b' },
-	hardwood: { glyph: '🪵', tint: '#6b4420' },
 	stone: { glyph: '🪨', tint: '#7d8a99' },
 	fiber: { glyph: '🌾', tint: '#c9b56b' },
-	clay: { glyph: '🧱', tint: '#b5734b' },
-	iron_ore: { glyph: '⛏️', tint: '#8a93a6' },
-	gold_ore: { glyph: '🪙', tint: '#f0b23c' },
-	coal: { glyph: '🖤', tint: '#3a3a3a' },
-	salt: { glyph: '🧂', tint: '#e8ecef' },
-	gems: { glyph: '💎', tint: '#5ac8c8' },
-	obsidian: { glyph: '🔮', tint: '#3a3348' },
-	sulfur: { glyph: '🟡', tint: '#d9cf3a' },
-	oyster: { glyph: '🦪', tint: '#c3cad3' },
-
-	// Food & drink
 	coconut: { glyph: '🥥', tint: '#8a5a33' },
-	berry: { glyph: '🫐', tint: '#7a4a8a' },
-	fish: { glyph: '🐟', tint: '#5aa2e0' },
-	cooked_fish: { glyph: '🍣', tint: '#e8973c' },
+
+	// ── Uncommon resources ──────────────────────────────────────────────
+	hardwood: { glyph: '🪵', tint: '#6b4420' },
+	clay: { glyph: '🧱', tint: '#b5734b' },
+	herb: { glyph: '🌿', tint: '#6bbf5a' },
+	shell: { glyph: '🐚', tint: '#e0c9a6' },
+
+	// ── Rare resources ──────────────────────────────────────────────────
+	iron_ore: { glyph: '⛏️', tint: '#8a93a6' },
+	pearl: { glyph: '🫧', tint: '#dfe9f0' },
+
+	// ── Food (raw) ──────────────────────────────────────────────────────
 	meat: { glyph: '🥩', tint: '#c95d5d' },
 	cooked_meat: { glyph: '🍖', tint: '#a8552a' },
-	egg: { glyph: '🥚', tint: '#e8dcc0' },
+	berry: { glyph: '🫐', tint: '#7a4a8a' },
+	cooked_berry: { glyph: '🍒', tint: '#a8324a' },
+	fish: { glyph: '🐟', tint: '#5aa2e0' },
+	cooked_fish: { glyph: '🍣', tint: '#e8973c' },
 	mushroom: { glyph: '🍄', tint: '#c0392b' },
-	fruit: { glyph: '🍎', tint: '#e0575b' },
-	water: { glyph: '💧', tint: '#5aa2e0' },
-	juice: { glyph: '🧃', tint: '#e8973c' },
-	soup: { glyph: '🍲', tint: '#e8973c' },
-	bread: { glyph: '🍞', tint: '#d8a24a' },
-	herb: { glyph: '🌿', tint: '#6bbf5a' },
-	seeds: { glyph: '🌱', tint: '#6bbf5a' },
+	mushroom_soup: { glyph: '🍲', tint: '#c98a4a' },
+	salted_fish: { glyph: '🐠', tint: '#7fb8d8' },
+	fish_stew: { glyph: '🍲', tint: '#e8973c' },
+	water_flask: { glyph: '💧', tint: '#5aa2e0' },
 
-	// Tools
-	axe: { glyph: '🪓', tint: '#b0b6c2' },
-	pickaxe: { glyph: '⛏️', tint: '#b0b6c2' },
+	// ── Volcanic resources ──────────────────────────────────────────────
+	obsidian_shard: { glyph: '🔮', tint: '#3a3348' },
+	sulfur: { glyph: '🟡', tint: '#d9cf3a' },
+	gemstone: { glyph: '💎', tint: '#5ac8c8' },
+
+	// ── Creature drops ──────────────────────────────────────────────────
+	hide: { glyph: '🟫', tint: '#9c6b3f' },
+	feather: { glyph: '🪶', tint: '#e8e2d0' },
+	boar_tusk: { glyph: '🦷', tint: '#e6ddc8' },
+	venom_sac: { glyph: '🧪', tint: '#6bbf5a' },
+	tiger_fang: { glyph: '🦷', tint: '#d8c48a' },
+
+	// ── Tools (with tier-aware tints) ───────────────────────────────────
+	stone_axe: { glyph: '🪓', tint: '#8a93a6' },
+	stone_pickaxe: { glyph: '⛏️', tint: '#8a93a6' },
+	stone_knife: { glyph: '🔪', tint: '#8a93a6' },
+	iron_axe: { glyph: '🪓', tint: '#c3cad3' },
+	iron_pickaxe: { glyph: '⛏️', tint: '#c3cad3' },
+	iron_knife: { glyph: '🔪', tint: '#c3cad3' },
 	fishing_rod: { glyph: '🎣', tint: '#d8a24a' },
-	knife: { glyph: '🔪', tint: '#c3cad3' },
-	hoe: { glyph: '🪏', tint: '#8a5a2b' },
-	torch: { glyph: '🔥', tint: '#ed8936' },
-	lamp: { glyph: '🏮', tint: '#f6ad55' },
-	watering_can: { glyph: '🪣', tint: '#5aa2e0' },
+	gold_hoe: { glyph: '🪏', tint: '#f0b23c' },
+	obsidian_pickaxe: { glyph: '⛏️', tint: '#5a4d78' },
+	lantern: { glyph: '🏮', tint: '#f6ad55' },
 
-	// Weapons
-	spear: { glyph: '🔱', tint: '#8a93a6' },
-	bow: { glyph: '🏹', tint: '#8a5a2b' },
-	arrow: { glyph: '🎯', tint: '#c9b56b' },
+	// ── Weapons (family glyphs) ─────────────────────────────────────────
+	wooden_spear: { glyph: '🔱', tint: '#b98a4a' },
+	iron_spear: { glyph: '🔱', tint: '#8a93a6' },
+	short_bow: { glyph: '🏹', tint: '#8a5a2b' },
+	hunting_bow: { glyph: '🏹', tint: '#6b4420' },
 	machete: { glyph: '🗡️', tint: '#b0b6c2' },
-	sword: { glyph: '⚔️', tint: '#c3cad3' },
+	iron_sword: { glyph: '⚔️', tint: '#c3cad3' },
+	steel_sword: { glyph: '⚔️', tint: '#dfe6ef' },
+	obsidian_blade: { glyph: '⚔️', tint: '#5a4d78' },
+	arrow: { glyph: '🎯', tint: '#c9b56b' },
 
-	// Armor
-	armor: { glyph: '🛡️', tint: '#8a93a6' },
-	helmet: { glyph: '🪖', tint: '#8a93a6' },
-	boots: { glyph: '🥾', tint: '#6b4420' },
+	// ── Refined materials ───────────────────────────────────────────────
+	iron_ingot: { glyph: '🧱', tint: '#8a93a6' },
+	steel_ingot: { glyph: '🧱', tint: '#c3cad3' },
+	gold_ingot: { glyph: '🧱', tint: '#f0b23c' },
+	charcoal: { glyph: '🖤', tint: '#3a3a3a' },
+	glass: { glyph: '🪟', tint: '#bfe3ea' },
+	leather: { glyph: '🧶', tint: '#a9713e' },
+	cloth: { glyph: '🧵', tint: '#c9b56b' },
+	rope: { glyph: '🪢', tint: '#c9b56b' },
+	sail_cloth: { glyph: '⛵', tint: '#e8e2d0' },
+	hull_plank: { glyph: '🪵', tint: '#8a5a2b' },
+	pearl_necklace: { glyph: '📿', tint: '#dfe9f0' },
+	bandage: { glyph: '🩹', tint: '#e8e2d0' },
+	antidote: { glyph: '🧪', tint: '#6bbf5a' },
+	herbal_tonic: { glyph: '🧪', tint: '#6bbf5a' },
+	seed: { glyph: '🌱', tint: '#6bbf5a' },
+	fertilizer: { glyph: '💩', tint: '#8a6b3f' },
 
-	// Quest / special
-	relic: { glyph: '🗿', tint: '#b07fe0' },
-	artifact: { glyph: '🏺', tint: '#d69e2e' },
-	boat_kit: { glyph: '⛵', tint: '#5aa2e0' },
-	map: { glyph: '🗺️', tint: '#d8c48a' },
-	key: { glyph: '🗝️', tint: '#f0b23c' },
-	coin: { glyph: '🪙', tint: '#f0b23c' }
+	// ── Raw resources (tier 2) ──────────────────────────────────────────
+	bamboo: { glyph: '🎍', tint: '#8fbf4a' },
+	salt: { glyph: '🧂', tint: '#e8ecef' },
+	sand: { glyph: '🏖️', tint: '#e6d6a8' },
+	gold_ore: { glyph: '🪙', tint: '#f0b23c' },
+	croc_hide: { glyph: '🐊', tint: '#5b8a4a' },
+	wolf_pelt: { glyph: '🐺', tint: '#9aa0a6' },
+
+	// ── Armor ───────────────────────────────────────────────────────────
+	fiber_tunic: { glyph: '🥋', tint: '#c9b56b' },
+	leather_armor: { glyph: '🛡️', tint: '#a9713e' },
+	iron_armor: { glyph: '🛡️', tint: '#8a93a6' },
+	croc_armor: { glyph: '🛡️', tint: '#5b8a4a' },
+	obsidian_armor: { glyph: '🛡️', tint: '#5a4d78' },
+
+	// ── Quest / story ───────────────────────────────────────────────────
+	ancient_fragment: { glyph: '🗿', tint: '#b07fe0' },
+	crater_ward: { glyph: '🔮', tint: '#b07fe0' },
+	sailing_boat: { glyph: '⛵', tint: '#5aa2e0' }
 };
+
+/** The set of ids with an explicit glyph (used by the coverage test). */
+export const ITEM_ICON_IDS: ReadonlySet<string> = new Set(Object.keys(BY_ID));
 
 /** Category defaults, used when there is no explicit id override. */
 const BY_CATEGORY: Record<string, ItemIcon> = {
