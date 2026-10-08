@@ -1006,26 +1006,43 @@ function pShadow(g: Phaser.GameObjects.Graphics, y: number): void {
 	ellipse(g, 20, y, 8, 2.5, 0x000000, 0.16);
 }
 
-/** Both boots + legs, shared by every facing (side tweaks are drawn after). */
-function pLegs(g: Phaser.GameObjects.Graphics, dark: boolean): void {
+/**
+ * Both boots + legs, shared by the forward/back views. `stride` animates the
+ * walk: 0 = standing (both legs level), 1 = left leg forward / right back,
+ * 2 = the reverse. Legs are shifted by whole pixels so the art stays crisp.
+ */
+function pLegs(g: Phaser.GameObjects.Graphics, dark: boolean, stride = 0): void {
 	const pant = dark ? P_PANTS_D : P_PANTS;
+	const lift = stride === 0 ? 0 : 2; // how far the forward leg rises
+	// Per-leg vertical offset: one steps forward (lifts) while the other plants.
+	let lyL = 0;
+	let lyR = 0;
+	if (stride === 1) {
+		lyL = lift; // left leg forward
+		lyR = 0;
+	} else if (stride === 2) {
+		lyL = 0;
+		lyR = lift; // right leg forward
+	}
+	const top = 36;
+	const h = 12;
 	// Thighs / shins.
-	rect(g, 13, 36, 5, 12, pant);
-	rect(g, 22, 36, 5, 12, pant);
+	rect(g, 13, top + lyL, 5, h - lyL, pant);
+	rect(g, 22, top + lyR, 5, h - lyR, pant);
 	// Inner-edge shade + a subtle knee crease.
-	rect(g, 13, 36, 1, 12, shade(pant, 0.78));
-	rect(g, 22, 36, 1, 12, shade(pant, 0.9));
-	rect(g, 13, 43, 5, 1, shade(pant, 0.82));
-	rect(g, 22, 43, 5, 1, shade(pant, 0.9));
-	// Boots: toe box, sole, and a lace line.
-	rect(g, 12, 48, 7, 5, P_BOOT);
-	rect(g, 21, 48, 7, 5, P_BOOT);
-	rect(g, 12, 51, 7, 2, P_BOOT_D);
-	rect(g, 21, 51, 7, 2, P_BOOT_D);
-	rect(g, 12, 48, 7, 1, shade(P_BOOT, 1.25));
-	rect(g, 21, 48, 7, 1, shade(P_BOOT, 1.25));
-	rect(g, 14, 49, 3, 1, 0x6b4a2f); // lace
-	rect(g, 23, 49, 3, 1, 0x6b4a2f);
+	rect(g, 13, top + lyL, 1, h - lyL, shade(pant, 0.78));
+	rect(g, 22, top + lyR, 1, h - lyR, shade(pant, 0.9));
+	rect(g, 13, top + lyL + (h - lyL) - 5, 5, 1, shade(pant, 0.82));
+	rect(g, 22, top + lyR + (h - lyR) - 5, 5, 1, shade(pant, 0.9));
+	// Boots: toe box, sole, and a lace line. The forward foot lifts slightly.
+	rect(g, 12, 48 + lyL, 7, 5, P_BOOT);
+	rect(g, 21, 48 + lyR, 7, 5, P_BOOT);
+	rect(g, 12, 51 + lyL, 7, 2, P_BOOT_D);
+	rect(g, 21, 51 + lyR, 7, 2, P_BOOT_D);
+	rect(g, 12, 48 + lyL, 7, 1, shade(P_BOOT, 1.25));
+	rect(g, 21, 48 + lyR, 7, 1, shade(P_BOOT, 1.25));
+	rect(g, 14, 49 + lyL, 3, 1, 0x6b4a2f); // lace
+	rect(g, 23, 49 + lyR, 3, 1, 0x6b4a2f);
 }
 
 /** Belt with a brass buckle (over the waist). */
@@ -1036,9 +1053,13 @@ function pBelt(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 19, 34, 3, 2, 0x8a6a20);
 }
 
-/** FRONT-facing player. */
-function playerDown(g: Phaser.GameObjects.Graphics): void {
+/** FRONT-facing player. `stride` drives the walk cycle (0 = standing). */
+function playerDown(g: Phaser.GameObjects.Graphics, stride = 0): void {
 	pShadow(g, 54);
+
+	// Arms swing opposite the legs while walking (whole-pixel, stays crisp).
+	const armL = stride === 1 ? 2 : stride === 2 ? -2 : 0;
+	const armR = -armL;
 
 	// Torso — shirt with lit-left / shaded-right volume and a shoulder seam.
 	rect(g, 12, 20, 16, 16, P_SHIRT);
@@ -1059,19 +1080,19 @@ function playerDown(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 22, 22, 5, 1, P_SASH_D);
 	rect(g, 22, 33, 5, 1, P_SASH_D);
 
-	// Arms + hands (sleeves cuffed, hands with a thumb).
-	rect(g, 8, 22, 5, 12, P_SHIRT_D); // left sleeve
-	rect(g, 27, 22, 5, 12, P_SHIRT_D); // right sleeve
-	rect(g, 8, 22, 5, 3, shade(P_SHIRT_D, 1.2));
-	rect(g, 27, 22, 5, 3, shade(P_SHIRT_D, 1.2));
-	rect(g, 8, 33, 5, 5, P_SKIN); // left hand
-	rect(g, 27, 33, 5, 5, P_SKIN);
-	rect(g, 8, 37, 5, 1, P_SKIN_D);
-	rect(g, 27, 37, 5, 1, P_SKIN_D);
-	rect(g, 12, 34, 1, 3, P_SKIN_D); // thumbs
-	rect(g, 27, 34, 1, 3, P_SKIN_D);
+	// Arms + hands (sleeves cuffed, hands with a thumb). Swing up/down per stride.
+	rect(g, 8, 22 + armL, 5, 12, P_SHIRT_D); // left sleeve
+	rect(g, 27, 22 + armR, 5, 12, P_SHIRT_D); // right sleeve
+	rect(g, 8, 22 + armL, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 27, 22 + armR, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 8, 33 + armL, 5, 5, P_SKIN); // left hand
+	rect(g, 27, 33 + armR, 5, 5, P_SKIN);
+	rect(g, 8, 37 + armL, 5, 1, P_SKIN_D);
+	rect(g, 27, 37 + armR, 5, 1, P_SKIN_D);
+	rect(g, 12, 34 + armL, 1, 3, P_SKIN_D); // thumbs
+	rect(g, 27, 34 + armR, 1, 3, P_SKIN_D);
 
-	pLegs(g, false);
+	pLegs(g, false, stride);
 	pBelt(g);
 
 	// Neck.
@@ -1122,9 +1143,12 @@ function playerDown(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 18, 17, 4, 1, 0xa9613f);
 }
 
-/** BACK-facing player (seen from behind). */
-function playerUp(g: Phaser.GameObjects.Graphics): void {
+/** BACK-facing player (seen from behind). `stride` drives the walk cycle. */
+function playerUp(g: Phaser.GameObjects.Graphics, stride = 0): void {
 	pShadow(g, 54);
+
+	const armL = stride === 1 ? -2 : stride === 2 ? 2 : 0;
+	const armR = -armL;
 
 	// Torso — plain back of the shirt (no collar/buttons), same volume.
 	rect(g, 12, 20, 16, 16, P_SHIRT);
@@ -1137,16 +1161,16 @@ function playerUp(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 22, 21, 2, 13, shade(P_SASH, 1.2));
 
 	// Arms + hands.
-	rect(g, 8, 22, 5, 12, P_SHIRT_D);
-	rect(g, 27, 22, 5, 12, P_SHIRT_D);
-	rect(g, 8, 22, 5, 3, shade(P_SHIRT_D, 1.2));
-	rect(g, 27, 22, 5, 3, shade(P_SHIRT_D, 1.2));
-	rect(g, 8, 33, 5, 5, P_SKIN);
-	rect(g, 27, 33, 5, 5, P_SKIN);
-	rect(g, 8, 37, 5, 1, P_SKIN_D);
-	rect(g, 27, 37, 5, 1, P_SKIN_D);
+	rect(g, 8, 22 + armL, 5, 12, P_SHIRT_D);
+	rect(g, 27, 22 + armR, 5, 12, P_SHIRT_D);
+	rect(g, 8, 22 + armL, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 27, 22 + armR, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 8, 33 + armL, 5, 5, P_SKIN);
+	rect(g, 27, 33 + armR, 5, 5, P_SKIN);
+	rect(g, 8, 37 + armL, 5, 1, P_SKIN_D);
+	rect(g, 27, 37 + armR, 5, 1, P_SKIN_D);
 
-	pLegs(g, true);
+	pLegs(g, true, stride);
 	pBelt(g);
 
 	// Neck (mostly hidden by hair).
@@ -1166,9 +1190,16 @@ function playerUp(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 11, 4, 18, 1, shade(P_HAIR, 0.8));
 }
 
-/** RIGHT-facing player (scene mirrors horizontally for left). */
-function playerSide(g: Phaser.GameObjects.Graphics): void {
+/** RIGHT-facing player (scene mirrors horizontally for left). `stride` = walk. */
+function playerSide(g: Phaser.GameObjects.Graphics, stride = 0): void {
 	pShadow(g, 54);
+
+	// Profile walk: the legs swing fore/aft and the arms counter-swing. Offset in
+	// whole pixels so the silhouette stays crisp. stride 1 = near leg forward,
+	// 2 = near leg back.
+	const nearDx = stride === 1 ? 3 : stride === 2 ? -3 : 0;
+	const farDx = -nearDx;
+	const armDx = -nearDx; // arm opposes the near leg
 
 	// Torso in profile (narrower), lit from the front-left.
 	rect(g, 13, 20, 14, 16, P_SHIRT);
@@ -1180,24 +1211,25 @@ function playerSide(g: Phaser.GameObjects.Graphics): void {
 	rect(g, 22, 21, 4, 13, P_SASH);
 	rect(g, 22, 21, 2, 13, shade(P_SASH, 1.2));
 
-	// Near arm swung forward, far arm hinted behind the torso.
-	rect(g, 9, 22, 5, 13, P_SHIRT_D); // near sleeve
-	rect(g, 9, 22, 5, 3, shade(P_SHIRT_D, 1.2));
-	rect(g, 9, 34, 5, 5, P_SKIN); // near hand
-	rect(g, 9, 38, 5, 1, P_SKIN_D);
-	rect(g, 26, 24, 3, 9, shade(P_SHIRT_D, 0.82)); // far arm (behind)
-
-	// Legs in profile: near leg forward, far leg behind.
-	rect(g, 15, 36, 5, 12, P_PANTS);
-	rect(g, 21, 36, 4, 12, P_PANTS_D); // far leg
-	rect(g, 15, 36, 1, 12, shade(P_PANTS, 0.8));
-	rect(g, 13, 48, 8, 5, P_BOOT); // near boot (longer toe)
-	rect(g, 20, 48, 6, 5, shade(P_BOOT, 0.85)); // far boot
-	rect(g, 13, 51, 8, 2, P_BOOT_D);
-	rect(g, 20, 51, 6, 2, P_BOOT_D);
-	rect(g, 13, 48, 8, 1, shade(P_BOOT, 1.25));
+	// Legs in profile (drawn first so the torso/arm overlap correctly).
+	const legTop = 36;
+	rect(g, 15 + farDx, legTop, 4, 12, P_PANTS_D); // far leg (behind)
+	rect(g, 15 + nearDx, legTop, 5, 12, P_PANTS); // near leg
+	rect(g, 15 + nearDx, legTop, 1, 12, shade(P_PANTS, 0.8));
+	rect(g, 13 + farDx, 48, 6, 5, shade(P_BOOT, 0.85)); // far boot
+	rect(g, 13 + nearDx, 48, 8, 5, P_BOOT); // near boot (longer toe)
+	rect(g, 13 + farDx, 51, 6, 2, P_BOOT_D);
+	rect(g, 13 + nearDx, 51, 8, 2, P_BOOT_D);
+	rect(g, 13 + nearDx, 48, 8, 1, shade(P_BOOT, 1.25));
 
 	pBelt(g);
+
+	// Near arm swung forward/back, far arm hinted behind the torso.
+	rect(g, 9 + armDx, 22, 5, 13, P_SHIRT_D); // near sleeve
+	rect(g, 9 + armDx, 22, 5, 3, shade(P_SHIRT_D, 1.2));
+	rect(g, 9 + armDx, 34, 5, 5, P_SKIN); // near hand
+	rect(g, 9 + armDx, 38, 5, 1, P_SKIN_D);
+	rect(g, 26 + farDx, 24, 3, 9, shade(P_SHIRT_D, 0.82)); // far arm (behind)
 
 	// Neck.
 	rect(g, 16, 18, 7, 4, P_SKIN_D);
@@ -1894,6 +1926,13 @@ export function ensureSprites(scene: Phaser.Scene): void {
 	P(SPRITE_KEYS.playerDown, 40, 56, (g) => playerDown(g));
 	P(SPRITE_KEYS.playerUp, 40, 56, (g) => playerUp(g));
 	P(SPRITE_KEYS.playerSide, 40, 56, (g) => playerSide(g));
+	// Walk-cycle frames (2 per direction; the above keys are the standing pose).
+	P(SPRITE_KEYS.playerDown1, 40, 56, (g) => playerDown(g, 1));
+	P(SPRITE_KEYS.playerDown2, 40, 56, (g) => playerDown(g, 2));
+	P(SPRITE_KEYS.playerUp1, 40, 56, (g) => playerUp(g, 1));
+	P(SPRITE_KEYS.playerUp2, 40, 56, (g) => playerUp(g, 2));
+	P(SPRITE_KEYS.playerSide1, 40, 56, (g) => playerSide(g, 1));
+	P(SPRITE_KEYS.playerSide2, 40, 56, (g) => playerSide(g, 2));
 	P(SPRITE_KEYS.npc, 40, 56, (g) => npc(g, 0x63b3ed, 0xe0b088));
 
 	// Placed structures.

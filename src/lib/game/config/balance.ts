@@ -15,6 +15,8 @@ export const BALANCE = {
 		dodgeEnergyCost: 14,
 		/** Radius of the player physics body (px). */
 		bodyRadius: 12,
+		/** Milliseconds per walk-cycle step pose (lower = faster stride). */
+		walkFrameMs: 150,
 		startingHealth: 100,
 		startingHunger: 100,
 		startingThirst: 100,

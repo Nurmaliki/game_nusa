@@ -46,6 +46,9 @@ export class WorldScene extends Phaser.Scene {
 	private lastTimeEmit = 0;
 	private lastStatsEmit = 0;
 	private lastChunkCheck = 0;
+	/** Walk-cycle phase timer (ms) + current step pose (0 stand, 1/2 step). */
+	private walkTimer = 0;
+	private walkFrame: 0 | 1 | 2 = 0;
 	private lastInteractTarget: RenderedNode | null = null;
 	private currentBiome: BiomeId = 'tropical_coast';
 	private discovered = new Set<BiomeId>();
@@ -237,12 +240,13 @@ export class WorldScene extends Phaser.Scene {
 	/**
 	 * Choose the player's directional texture from its facing vector: moving up
 	 * uses the back, moving down the front, and horizontal movement uses the side
-	 * art (mirrored for left). Presentation only — the physics body is untouched.
+	 * art (mirrored for left). `walkFrame` (0/1/2) picks the standing pose or one
+	 * of the two step poses so the legs actually move. Presentation only.
 	 */
-	private updatePlayerFacing(): void {
-		const { key, flipX } = playerFacingTexture(this.player.facingVector);
+	private updatePlayerFacing(walkFrame: 0 | 1 | 2): void {
+		const { key, flipX } = playerFacingTexture(this.player.facingVector, walkFrame);
 		const sprite = this.player.sprite;
-		sprite.setTexture(key);
+		if (sprite.texture.key !== key) sprite.setTexture(key);
 		sprite.setFlipX(flipX);
 	}
 
@@ -290,16 +294,34 @@ export class WorldScene extends Phaser.Scene {
 		state.player.position = this.player.position;
 		// Y-sort the player among world objects so tall sprites overlap correctly.
 		this.player.sprite.setDepth(this.player.position.y);
-		// Face the direction of travel — swap to the up/side/down art and mirror
-		// the side art for leftward movement. Pure presentation, no body change.
-		this.updatePlayerFacing();
+
+		const moving = (this.player.sprite.body as Phaser.Physics.Arcade.Body).speed > 4;
+
+		// Walk cycle: alternate the two step poses while moving, fall back to the
+		// standing pose when still. Timer-driven so the stride speed is framerate-
+		// independent; reduced motion keeps a single calm standing pose.
+		if (moving && !settingsStore.reducedMotion) {
+			this.walkTimer += delta;
+			const stepMs = BALANCE.player.walkFrameMs;
+			if (this.walkTimer >= stepMs) {
+				this.walkTimer -= stepMs;
+				this.walkFrame = this.walkFrame === 1 ? 2 : 1;
+			} else if (this.walkFrame === 0) {
+				this.walkFrame = 1;
+			}
+		} else {
+			this.walkTimer = 0;
+			this.walkFrame = 0;
+		}
+
+		// Face the direction of travel — swap to the up/side/down art (with the
+		// current step pose) and mirror the side art for leftward movement.
+		this.updatePlayerFacing(this.walkFrame);
 		// NOTE: no sprite scaling/bobbing for the player. A fractional "breath"
 		// scale (1.0±0.02) blurred the pixel art under the camera zoom, and moving
 		// the sprite would drag its physics body. The player stays pixel-crisp and
 		// rock-steady; ambient life comes from the world around it (§5 / §15).
 		this.player.sprite.setScale(1, 1);
-
-		const moving = (this.player.sprite.body as Phaser.Physics.Arcade.Body).speed > 4;
 
 		// First-session tutorial: the move step completes on the first step taken.
 		if (moving && !this.emittedMoveSignal) {

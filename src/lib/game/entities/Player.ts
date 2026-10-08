@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PLACEHOLDER_KEYS } from '../core/placeholders';
-import { clampMagnitude, normalize, resolveMoveVelocity } from '../core/movement';
+import { normalize, resolveMoveVelocity } from '../core/movement';
 import { BALANCE } from '../config/balance';
 import type { InputState } from '../input/actions';
 import type { Vec2 } from '$types/core';
@@ -12,7 +12,7 @@ import type { Vec2 } from '$types/core';
 export class Player {
 	readonly sprite: Phaser.Physics.Arcade.Sprite;
 	private scene: Phaser.Scene;
-	private facing: Vec2 = { x: 1, y: 0 };
+	private facing: Vec2 = { x: 0, y: 1 };
 	private dodgeUntil = 0;
 	private dodgeCooldownUntil = 0;
 
@@ -71,14 +71,12 @@ export class Player {
 			body.setVelocity(v.x, v.y);
 		}
 
-		// Track facing. Moving always faces the direction of travel (so WASD/joystick
-		// drives the sprite and it never moonwalks); when standing still a pointer
-		// aim takes over so the character can look around / aim.
-		const aim = clampMagnitude(input.aimVector(), 1);
+		// Track facing. Moving faces the direction of travel (so WASD/joystick
+		// drives the sprite and it never moonwalks). When standing still we KEEP
+		// the last facing rather than snapping to the pointer — a passive cursor
+		// used to make the idle character flip to "up"/back, which read as a bug.
 		if (move.x !== 0 || move.y !== 0) {
 			this.facing = normalize(move);
-		} else if (aim.x !== 0 || aim.y !== 0) {
-			this.facing = normalize(aim);
 		}
 	}
 

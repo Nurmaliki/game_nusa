@@ -12,6 +12,13 @@ export const SPRITE_KEYS = {
 	playerDown: 'sprite_player_down',
 	playerUp: 'sprite_player_up',
 	playerSide: 'sprite_player_side',
+	/** Walk-cycle frames (1 = left leg forward, 2 = right leg forward). */
+	playerDown1: 'sprite_player_down_1',
+	playerDown2: 'sprite_player_down_2',
+	playerUp1: 'sprite_player_up_1',
+	playerUp2: 'sprite_player_up_2',
+	playerSide1: 'sprite_player_side_1',
+	playerSide2: 'sprite_player_side_2',
 	tree: 'sprite_tree',
 	pine: 'sprite_pine',
 	palm: 'sprite_palm',
@@ -75,16 +82,42 @@ export const SPRITE_KEYS = {
  * Map a facing direction to the player's directional texture key + whether to
  * mirror it. Pure (no engine) so it is unit-testable. `side` art is drawn
  * right-facing, so leftward movement mirrors it.
+ *
+ * @param frame walk-cycle frame: 0 = standing, 1 or 2 = the two step poses.
  */
-export function playerFacingTexture(facing: { x: number; y: number }): {
+export function playerFacingTexture(
+	facing: { x: number; y: number },
+	frame: 0 | 1 | 2 = 0
+): {
 	key: string;
 	flipX: boolean;
 } {
+	let key: string;
+	let flipX = false;
 	if (Math.abs(facing.x) > Math.abs(facing.y)) {
-		return { key: SPRITE_KEYS.playerSide, flipX: facing.x < 0 };
+		flipX = facing.x < 0;
+		key =
+			frame === 1
+				? SPRITE_KEYS.playerSide1
+				: frame === 2
+					? SPRITE_KEYS.playerSide2
+					: SPRITE_KEYS.playerSide;
+	} else if (facing.y < 0) {
+		key =
+			frame === 1
+				? SPRITE_KEYS.playerUp1
+				: frame === 2
+					? SPRITE_KEYS.playerUp2
+					: SPRITE_KEYS.playerUp;
+	} else {
+		key =
+			frame === 1
+				? SPRITE_KEYS.playerDown1
+				: frame === 2
+					? SPRITE_KEYS.playerDown2
+					: SPRITE_KEYS.playerDown;
 	}
-	if (facing.y < 0) return { key: SPRITE_KEYS.playerUp, flipX: false };
-	return { key: SPRITE_KEYS.playerDown, flipX: false };
+	return { key, flipX };
 }
 
 /** Biome-agnostic key for a resource node type (falls back to a generic). */

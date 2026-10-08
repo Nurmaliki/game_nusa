@@ -119,4 +119,29 @@ describe('playerFacingTexture', () => {
 	it('faces down for a shallow downward diagonal', () => {
 		expect(playerFacingTexture({ x: 0.3, y: 0.9 }).key).toBe(SPRITE_KEYS.playerDown);
 	});
+
+	it('returns the two walk frames per direction when a frame is given', () => {
+		expect(playerFacingTexture({ x: 0, y: 1 }, 1).key).toBe(SPRITE_KEYS.playerDown1);
+		expect(playerFacingTexture({ x: 0, y: 1 }, 2).key).toBe(SPRITE_KEYS.playerDown2);
+		expect(playerFacingTexture({ x: 0, y: -1 }, 1).key).toBe(SPRITE_KEYS.playerUp1);
+		expect(playerFacingTexture({ x: 0, y: -1 }, 2).key).toBe(SPRITE_KEYS.playerUp2);
+		expect(playerFacingTexture({ x: 1, y: 0 }, 1).key).toBe(SPRITE_KEYS.playerSide1);
+		expect(playerFacingTexture({ x: 1, y: 0 }, 2).key).toBe(SPRITE_KEYS.playerSide2);
+	});
+
+	it('keeps the mirror decision for leftward walk frames', () => {
+		expect(playerFacingTexture({ x: -1, y: 0 }, 1)).toEqual({
+			key: SPRITE_KEYS.playerSide1,
+			flipX: true
+		});
+		expect(playerFacingTexture({ x: -1, y: 0 }, 2)).toEqual({
+			key: SPRITE_KEYS.playerSide2,
+			flipX: true
+		});
+	});
+
+	it('frame 0 (standing) is the default', () => {
+		expect(playerFacingTexture({ x: 0, y: 1 }, 0).key).toBe(SPRITE_KEYS.playerDown);
+		expect(playerFacingTexture({ x: 0, y: 1 }).key).toBe(SPRITE_KEYS.playerDown);
+	});
 });
